@@ -6,65 +6,12 @@ import plotly.graph_objects as go
 st.set_page_config(page_title="Retirement Journey", layout="wide")
 
 # ---------------------------
-# HERO + GLOBAL STYLES
-# ---------------------------
-st.markdown(
-    """
-    <style>
-    body {
-        background-color: #f4f1ec;
-    }
-
-    .hero {
-        position: relative;
-        background-image: url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee");
-        background-size: cover;
-        background-position: center;
-        border-radius: 18px;
-        padding: 70px 40px 90px 40px;
-        margin-bottom: 40px;
-        box-shadow: 0px 20px 40px rgba(0,0,0,0.15);
-    }
-
-    .hero-overlay {
-        background: rgba(255,255,255,0.88);
-        border-radius: 14px;
-        padding: 40px;
-    }
-
-    .hero h1 {
-        font-size: 48px;
-        font-weight: 700;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    .hero p {
-        text-align: center;
-        font-size: 18px;
-        color: #555;
-        margin-bottom: 30px;
-    }
-
-    .chart-card {
-        background: rgba(255,255,255,0.96);
-        border-radius: 14px;
-        padding: 25px;
-        box-shadow: 0px 10px 25px rgba(0,0,0,0.12);
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# ---------------------------
 # SIDEBAR INPUTS
 # ---------------------------
-st.sidebar.header("Your Financial Picture")
+st.sidebar.header("Your Financial Snapshot")
 
 age = st.sidebar.number_input("Current Age", 60, 85, 75)
 end_age = 95
-retire_age = age
 
 income = st.sidebar.number_input("Annual Income ($)", value=0)
 expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=65000)
@@ -84,7 +31,7 @@ growth = st.sidebar.slider("Investment Growth (%)", 2.0, 7.0, 5.0) / 100
 inflation = st.sidebar.slider("Expense Inflation (%)", 1.0, 4.0, 2.5) / 100
 
 # ---------------------------
-# PROJECTION LOGIC (NO SPIKES)
+# PROJECTION LOGIC (NO SPIKE)
 # ---------------------------
 ages = np.arange(age, end_age + 1)
 
@@ -98,9 +45,8 @@ cashflow_path = []
 current_expenses = expenses
 
 for yr in ages:
-    # Home sale (reclassification only)
     if sell_home_age != "Never" and yr == int(sell_home_age):
-        home_owned = False
+        home_owned = False  # reclassification only
 
     total_assets = liquid_assets + (home_value if home_owned else 0)
     net_worth.append(total_assets - debt)
@@ -120,32 +66,48 @@ df = pd.DataFrame({
 })
 
 # ---------------------------
-# HERO SECTION
+# HEADER
 # ---------------------------
 st.markdown(
     """
-    <div class="hero">
-        <div class="hero-overlay">
-            <h1>Retirement Journey</h1>
-            <p>A visual path showing how your financial life may unfold over time</p>
-        </div>
-    </div>
+    <h1 style="text-align:center;">Retirement Journey</h1>
+    <p style="text-align:center; font-size:18px; color:#555;">
+    A visual path of your financial life
+    </p>
     """,
     unsafe_allow_html=True
 )
 
 # ---------------------------
-# JOURNEY CHART
+# CHART WITH IMAGE BACKGROUND (THIS WORKS)
 # ---------------------------
 fig = go.Figure()
+
+# Background image INSIDE plotly
+fig.update_layout(
+    images=[
+        dict(
+            source="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+            xref="paper",
+            yref="paper",
+            x=0,
+            y=1,
+            sizex=1,
+            sizey=1,
+            sizing="stretch",
+            opacity=0.35,
+            layer="below"
+        )
+    ]
+)
 
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
     name="Net Worth",
-    line=dict(color="#3a7d7c", width=5, shape="spline"),
+    line=dict(color="#2f5d62", width=5, shape="spline"),
     fill="tozeroy",
-    fillcolor="rgba(58,125,124,0.25)"
+    fillcolor="rgba(47,93,98,0.25)"
 ))
 
 fig.add_trace(go.Scatter(
@@ -159,7 +121,7 @@ fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Cash Flow"],
     name="Cash Flow",
-    line=dict(color="#e1ad01", width=3)
+    line=dict(color="#f2b705", width=3)
 ))
 
 # Milestones
@@ -199,13 +161,11 @@ fig.update_layout(
     legend=dict(orientation="h", y=1.08),
     xaxis=dict(title="Age"),
     yaxis=dict(title="Dollars ($)", showgrid=False),
-    plot_bgcolor="white",
+    plot_bgcolor="rgba(255,255,255,0.85)",
     margin=dict(t=40, b=40, l=60, r=60)
 )
 
-st.markdown("<div class='chart-card'>", unsafe_allow_html=True)
 st.plotly_chart(fig, use_container_width=True)
-st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown(
     "<p style='text-align:center; color:#666;'>Illustrative projection for planning purposes only.</p>",
