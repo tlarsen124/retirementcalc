@@ -103,9 +103,8 @@ for age in ages:
 
     investments += investment_return_amount
 
-    # ✅ Net worth = ALL assets − liabilities
-    total_assets = cash + investments + home_value
-    net_worth.append(total_assets - debt)
+    # Net worth = all assets - liabilities
+    net_worth.append(cash + investments + home_value - debt)
 
     expenses_series.append(total_expenses)
     cash_flow_series.append(cash_flow)
@@ -119,6 +118,26 @@ df = pd.DataFrame({
     "Expenses": expenses_series,
     "Cash Flow": cash_flow_series
 })
+
+# =========================
+# MILESTONE CALCULATIONS
+# =========================
+start_idx = 0
+peak_idx = df["Net Worth"].idxmax()
+mid_idx = int((start_idx + peak_idx) / 2)
+
+decline_candidates = df.loc[peak_idx:]
+decline_idx = decline_candidates[
+    decline_candidates["Net Worth"] < 0.9 * df.loc[peak_idx, "Net Worth"]
+].index
+decline_idx = decline_idx[0] if len(decline_idx) > 0 else df.index[-1]
+
+milestones = [
+    ("Start", start_idx, "#2c3e50"),
+    ("Building Wealth", mid_idx, "#27ae60"),
+    ("Peak Net Worth", peak_idx, "#f1c40f"),
+    ("Reassessment Phase", decline_idx, "#e67e22"),
+]
 
 # =========================
 # HEADER
@@ -159,11 +178,11 @@ right_min = df["Net Worth"].min() * 0.9
 right_max = df["Net Worth"].max() * 1.1
 
 # =========================
-# BUILD CHART (CLEAN)
+# BUILD CHART
 # =========================
 fig = go.Figure()
 
-# Net Worth (NO fill = no stripes)
+# Net Worth Line
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
@@ -172,6 +191,21 @@ fig.add_trace(go.Scatter(
     yaxis="y2"
 ))
 
+# Milestone Dots
+for label, idx, color in milestones:
+    fig.add_trace(go.Scatter(
+        x=[df.loc[idx, "Age"]],
+        y=[df.loc[idx, "Net Worth"]],
+        mode="markers+text",
+        marker=dict(size=20, color=color, line=dict(color="white", width=3)),
+        text=[label],
+        textposition="top center",
+        textfont=dict(size=14),
+        yaxis="y2",
+        showlegend=False
+    ))
+
+# Expenses
 if show_expenses:
     fig.add_trace(go.Scatter(
         x=df["Age"],
@@ -182,6 +216,7 @@ if show_expenses:
         yaxis="y1"
     ))
 
+# Cash Flow
 if show_cashflow:
     fig.add_trace(go.Scatter(
         x=df["Age"],
