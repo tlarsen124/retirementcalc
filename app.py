@@ -3,171 +3,148 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Retirement Journey", layout="wide")
+st.set_page_config(page_title="Cash Flow Analysis", layout="wide")
 
 # ---------------------------
-# Sidebar Inputs
-# ---------------------------
-st.sidebar.header("Your Financial Snapshot")
-
-age = st.sidebar.number_input("Current Age", min_value=40, max_value=80, value=65)
-retire_age = 67
-end_age = 95
-
-income = st.sidebar.number_input("Annual Income ($)", value=85000, step=5000)
-expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=60000, step=5000)
-
-cash = st.sidebar.number_input("Liquid Cash ($)", value=120000, step=10000)
-investments = st.sidebar.number_input("Investments ($)", value=650000, step=25000)
-debt = st.sidebar.number_input("Total Debt ($)", value=50000, step=5000)
-
-home_value = st.sidebar.number_input("Home Value ($)", value=700000, step=25000)
-
-sell_home_age = st.sidebar.selectbox(
-    "When would you likely sell your home?",
-    options=["Never"] + list(range(age + 1, end_age + 1)),
-    index=0
-)
-
-# Assumptions
-st.sidebar.markdown("---")
-st.sidebar.subheader("Planning Assumptions")
-
-growth_rate = st.sidebar.slider("Investment Growth Rate (%)", 2.0, 8.0, 5.0) / 100
-expense_inflation = st.sidebar.slider("Expense Inflation (%)", 1.0, 4.0, 2.5) / 100
-retirement_income_ratio = st.sidebar.slider("Income After Retirement (%)", 0, 100, 40) / 100
-
-# ---------------------------
-# Projection Logic
-# ---------------------------
-years = np.arange(age, end_age + 1)
-
-net_worth = []
-current_assets = cash + investments + home_value - debt
-current_investments = investments
-current_expenses = expenses
-
-for yr in years:
-    # Income logic
-    if yr < retire_age:
-        annual_income = income
-    else:
-        annual_income = income * retirement_income_ratio
-
-    # Home sale
-    if sell_home_age != "Never" and yr == int(sell_home_age):
-        current_assets += home_value
-        home_value = 0
-
-    # Cashflow
-    cashflow = annual_income - current_expenses
-    current_assets += cashflow
-
-    # Investment growth
-    current_investments *= (1 + growth_rate)
-    current_assets += current_investments * growth_rate
-
-    net_worth.append(current_assets)
-
-    current_expenses *= (1 + expense_inflation)
-
-df = pd.DataFrame({
-    "Age": years,
-    "Net Worth": net_worth
-})
-
-# Key points
-peak_idx = df["Net Worth"].idxmax()
-peak_age = df.loc[peak_idx, "Age"]
-peak_value = df.loc[peak_idx, "Net Worth"]
-
-# ---------------------------
-# Header
+# Background image (stock retirement photo)
 # ---------------------------
 st.markdown(
     """
-    <h1 style="text-align:center;">Retirement Journey</h1>
-    <p style="text-align:center; font-size:18px; color:#555;">
-    A visual look at how your financial life may unfold over time
-    </p>
+    <style>
+    .stApp {
+        background-image: url("https://images.unsplash.com/photo-1520975922284-7b9585a27d1f");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }
+    .block-container {
+        background-color: rgba(255, 255, 255, 0.92);
+        padding: 2rem;
+        border-radius: 12px;
+    }
+    </style>
     """,
     unsafe_allow_html=True
 )
 
 # ---------------------------
-# Summary Cards
+# Sidebar Inputs
 # ---------------------------
-col1, col2, col3 = st.columns(3)
+st.sidebar.header("Financial Inputs")
 
-col1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
-col2.metric("Peak Net Worth", f"${peak_value:,.0f}", f"Age {peak_age}")
-col3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
+age = st.sidebar.number_input("Current Age", 55, 80, 70)
+end_age = 100
+retire_age = 75
+
+income = st.sidebar.number_input("Annual Income ($)", value=0)
+expenses = st.sidebar.number_input("Annual Expenses ($)", value=65000)
+
+cash = st.sidebar.number_input("Liquid Cash ($)", value=200000)
+investments = st.sidebar.number_input("Investments ($)", value=600000)
+home_value = st.sidebar.number_input("Home Value ($)", value=700000)
+debt = st.sidebar.number_input("Debt ($)", value=0)
+
+sell_home_age = st.sidebar.selectbox(
+    "Age to Sell Home",
+    options=["Never"] + list(range(age + 1, end_age + 1))
+)
+
+st.sidebar.markdown("---")
+growth = st.sidebar.slider("Investment Growth (%)", 2.0, 7.0, 5.0) / 100
+inflation = st.sidebar.slider("Expense Inflation (%)", 1.0, 4.0, 2.5) / 100
 
 # ---------------------------
-# Journey Graph
+# Projection Logic (NO SPIKE)
+# ---------------------------
+ages = np.arange(age, end_age + 1)
+
+net_worth = []
+expense_path = []
+cashflow_path = []
+
+liquid_assets = cash + investments
+home_owned = True
+
+current_expenses = expenses
+
+for yr in ages:
+    # Income
+    annual_income = income if yr < retire_age else 0
+
+    # Home sale (reclassify only)
+    if sell_home_age != "Never" and yr == int(sell_home_age):
+        home_owned = False  # value already counted
+
+    # Net worth
+    total_assets = liquid_assets + (home_value if home_owned else 0)
+    nw = total_assets - debt
+    net_worth.append(nw)
+
+    # Cash flow
+    cashflow = annual_income - current_expenses
+    cashflow_path.append(cashflow)
+
+    # Grow investments
+    liquid_assets *= (1 + growth)
+
+    # Track expenses
+    expense_path.append(current_expenses)
+    current_expenses *= (1 + inflation)
+
+df = pd.DataFrame({
+    "Age": ages,
+    "Net Worth": net_worth,
+    "Expenses": expense_path,
+    "Cash Flow": cashflow_path
+})
+
+# ---------------------------
+# Chart (like your example)
 # ---------------------------
 fig = go.Figure()
 
 fig.add_trace(go.Scatter(
     x=df["Age"],
+    y=df["Cash Flow"],
+    name="Cash Flow",
+    line=dict(color="gold", width=3),
+    yaxis="y1"
+))
+
+fig.add_trace(go.Scatter(
+    x=df["Age"],
+    y=-df["Expenses"],
+    name="Total Expenses",
+    line=dict(color="red", width=3),
+    yaxis="y1"
+))
+
+fig.add_trace(go.Scatter(
+    x=df["Age"],
     y=df["Net Worth"],
-    mode="lines",
-    line=dict(width=5, color="#3a7d7c"),
-    fill="tozeroy",
-    fillcolor="rgba(58,125,124,0.25)",
-    hovertemplate="Age %{x}<br>Net Worth: $%{y:,.0f}<extra></extra>"
-))
-
-# Milestones
-fig.add_trace(go.Scatter(
-    x=[age],
-    y=[df.iloc[0]["Net Worth"]],
-    mode="markers+text",
-    marker=dict(size=14, color="white", line=dict(color="#2f5d62", width=3)),
-    text=["Start: strong position"],
-    textposition="bottom center"
-))
-
-fig.add_trace(go.Scatter(
-    x=[peak_age],
-    y=[peak_value],
-    mode="markers+text",
-    marker=dict(size=16, color="#f2b705"),
-    text=["Peak: highest net worth"],
-    textposition="top center"
-))
-
-fig.add_trace(go.Scatter(
-    x=[peak_age + 5],
-    y=[df.loc[df["Age"] == peak_age + 5, "Net Worth"].values[0] if peak_age + 5 <= end_age else peak_value],
-    mode="markers+text",
-    marker=dict(size=14, color="#c97c5d"),
-    text=["Noticeable decline"],
-    textposition="bottom center"
-))
-
-fig.add_trace(go.Scatter(
-    x=[end_age],
-    y=[df.iloc[-1]["Net Worth"]],
-    mode="markers+text",
-    marker=dict(size=14, color="#6c757d"),
-    text=["Time to reassess"],
-    textposition="top center"
+    name="Net Worth",
+    line=dict(color="royalblue", width=4, shape="spline"),
+    yaxis="y2"
 ))
 
 fig.update_layout(
+    title="Cash Flow Analysis",
     height=650,
-    showlegend=False,
-    xaxis=dict(title="Age", tickmode="linear"),
-    yaxis=dict(title="Net Worth ($)", showgrid=False),
+    legend=dict(orientation="h", y=1.08),
+    yaxis=dict(
+        title="Cash Flow / Expenses",
+        tickprefix="$",
+        showgrid=True
+    ),
+    yaxis2=dict(
+        title="Net Worth",
+        overlaying="y",
+        side="right",
+        tickprefix="$"
+    ),
+    xaxis=dict(title="Age"),
     plot_bgcolor="white",
-    margin=dict(t=40, b=40, l=60, r=60)
+    margin=dict(l=60, r=60, t=80, b=40)
 )
 
 st.plotly_chart(fig, use_container_width=True)
-
-st.markdown(
-    "<p style='text-align:center; color:#777;'>This projection is illustrative, not a guarantee.</p>",
-    unsafe_allow_html=True
-)
-
