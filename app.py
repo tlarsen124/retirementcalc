@@ -10,68 +10,49 @@ st.set_page_config(page_title="Retirement Journey", layout="wide")
 # ---------------------------
 st.sidebar.header("Your Financial Snapshot")
 
-age = st.sidebar.number_input("Current Age", 60, 85, 75)
+start_age = st.sidebar.number_input("Current Age", 60, 80, 75)
 end_age = 95
 
-income = st.sidebar.number_input("Annual Income ($)", value=0)
-expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=65000)
+annual_income = st.sidebar.number_input("Annual Income ($)", value=0)
+annual_expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=65000)
 
 cash = st.sidebar.number_input("Liquid Cash ($)", value=200000)
 investments = st.sidebar.number_input("Investments ($)", value=650000)
 home_value = st.sidebar.number_input("Home Value ($)", value=700000)
 debt = st.sidebar.number_input("Debt ($)", value=0)
 
-sell_home_age = st.sidebar.selectbox(
-    "When would you likely sell your home?",
-    ["Never"] + list(range(age + 1, end_age + 1))
-)
-
 st.sidebar.markdown("---")
 growth = st.sidebar.slider("Investment Growth (%)", 2.0, 7.0, 5.0) / 100
 inflation = st.sidebar.slider("Expense Inflation (%)", 1.0, 4.0, 2.5) / 100
 
 # ---------------------------
-# PROJECTION LOGIC (FIXED)
+# PROJECTION LOGIC
 # ---------------------------
-ages = np.arange(age, end_age + 1)
+ages = np.arange(start_age, end_age + 1)
 
 assets = cash + investments
-home_owned = True
+expenses = annual_expenses
 
 net_worth = []
-expense_path = []
-cashflow_path = []
 
-current_expenses = expenses
-
-for yr in ages:
-    # Home sale (reclassification only)
-    if sell_home_age != "Never" and yr == int(sell_home_age):
-        home_owned = False
-
-    # Income (assumed zero in retirement)
-    annual_income = income
-
-    # Cash flow
-    cashflow = annual_income - current_expenses
-
-    # Assets evolve with cashflow + growth
+for age in ages:
+    cashflow = annual_income - expenses
     assets = (assets + cashflow) * (1 + growth)
-
-    total_assets = assets + (home_value if home_owned else 0)
-    net_worth.append(total_assets - debt)
-
-    cashflow_path.append(cashflow)
-    expense_path.append(current_expenses)
-
-    current_expenses *= (1 + inflation)
+    net_worth.append(assets + home_value - debt)
+    expenses *= (1 + inflation)
 
 df = pd.DataFrame({
     "Age": ages,
-    "Net Worth": net_worth,
-    "Expenses": expense_path,
-    "Cash Flow": cashflow_path
+    "Net Worth": net_worth
 })
+
+# Key milestones
+peak_idx = df["Net Worth"].idxmax()
+peak_age = df.loc[peak_idx, "Age"]
+peak_value = df.loc[peak_idx, "Net Worth"]
+
+decline_age = min(peak_age + 7, end_age)
+decline_value = df.loc[df["Age"] == decline_age, "Net Worth"].values[0]
 
 # ---------------------------
 # HEADER
@@ -79,19 +60,16 @@ df = pd.DataFrame({
 st.markdown(
     """
     <h1 style="text-align:center;">Retirement Journey</h1>
-    <p style="text-align:center; font-size:18px; color:#555;">
-    A visual path showing how your finances may evolve over time
-    </p>
     """,
     unsafe_allow_html=True
 )
 
 # ---------------------------
-# CHART WITH PROPER IMAGE LAYERING
+# JOURNEY GRAPH
 # ---------------------------
 fig = go.Figure()
 
-# Background image INSIDE Plotly
+# Background image INSIDE chart
 fig.update_layout(
     images=[
         dict(
@@ -103,82 +81,29 @@ fig.update_layout(
             sizex=1,
             sizey=1,
             sizing="stretch",
-            opacity=0.30,
+            opacity=0.35,
             layer="below"
         )
     ]
 )
 
-# Net Worth (journey curve)
+# Journey path (net worth)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
-    name="Net Worth",
-    line=dict(color="#2f5d62", width=5, shape="spline"),
+    mode="lines",
+    line=dict(color="#4f6f73", width=6, shape="spline"),
     fill="tozeroy",
-    fillcolor="rgba(47,93,98,0.25)"
+    fillcolor="rgba(79,111,115,0.30)",
+    hovertemplate="Age %{x}<br>Net Worth: $%{y:,.0f}<extra></extra>"
 ))
 
-# Expenses (negative)
-fig.add_trace(go.Scatter(
-    x=df["Age"],
-    y=-df["Expenses"],
-    name="Total Expenses",
-    line=dict(color="#c94c4c", width=3)
-))
+# Milestone points
+milestones = [
+    (start_age, df.iloc[0]["Net Worth"], "Start:\nstrong position", "#1f7a63"),
+    (peak_age, peak_value, "Peak:\nhighest net worth", "#d4a017"),
+    (decline_age, decline_value, "Noticeable\ndecline", "#8f9779"),
+    (end_age, df.iloc[-1]["Net Worth"], "Time to\nreassess", "#c2a24d"),
+]
 
-# Cash Flow
-fig.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Cash Flow"],
-    name="Cash Flow",
-    line=dict(color="#f2b705", width=3)
-))
-
-# Milestones
-peak_idx = df["Net Worth"].idxmax()
-peak_age = df.loc[peak_idx, "Age"]
-peak_value = df.loc[peak_idx, "Net Worth"]
-
-fig.add_trace(go.Scatter(
-    x=[age],
-    y=[df.iloc[0]["Net Worth"]],
-    mode="markers+text",
-    marker=dict(size=14, color="white", line=dict(color="#2f5d62", width=3)),
-    text=["Start: strong position"],
-    textposition="bottom center"
-))
-
-fig.add_trace(go.Scatter(
-    x=[peak_age],
-    y=[peak_value],
-    mode="markers+text",
-    marker=dict(size=16, color="#f2b705"),
-    text=["Peak: highest net worth"],
-    textposition="top center"
-))
-
-fig.add_trace(go.Scatter(
-    x=[end_age],
-    y=[df.iloc[-1]["Net Worth"]],
-    mode="markers+text",
-    marker=dict(size=14, color="#777"),
-    text=["Time to reassess"],
-    textposition="top center"
-))
-
-fig.update_layout(
-    height=650,
-    legend=dict(orientation="h", y=1.08),
-    xaxis=dict(title="Age"),
-    yaxis=dict(title="Dollars ($)", showgrid=False),
-    plot_bgcolor="rgba(255,255,255,0.88)",
-    margin=dict(t=40, b=40, l=60, r=60)
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-st.markdown(
-    "<p style='text-align:center; color:#666;'>Illustrative projection for planning purposes only.</p>",
-    unsafe_allow_html=True
-)
+for age, value, label, color
