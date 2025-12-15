@@ -38,8 +38,12 @@ investment_return = st.sidebar.slider("Investment Return (%)", 2.0, 8.0, 5.0) / 
 expense_inflation = st.sidebar.slider("Expense Inflation (%)", 0.0, 5.0, 2.5) / 100
 care_inflation = st.sidebar.slider("Care Cost Inflation (%)", 0.0, 7.0, 3.0) / 100
 
+st.sidebar.header("Chart Options")
+show_expenses = st.sidebar.checkbox("Show Expenses", value=True)
+show_cashflow = st.sidebar.checkbox("Show Cash Flow", value=True)
+
 # =========================
-# CARE COST ASSUMPTIONS (ANNUAL)
+# CARE COST ASSUMPTIONS
 # =========================
 care_cost_map = {
     "None": 0,
@@ -97,8 +101,8 @@ df = pd.DataFrame({
 st.markdown(
     """
     <h1 style="text-align:center;">Retirement Financial Overview</h1>
-    <p style="text-align:center; font-size:18px; color:#666;">
-    A simple view of how your finances may evolve over time
+    <p style="text-align:center; font-size:20px; color:#666;">
+    A clear view of net worth, expenses, and cash flow over time
     </p>
     """,
     unsafe_allow_html=True
@@ -113,11 +117,11 @@ c2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
 c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
 
 # =========================
-# CLEAN, MINIMAL VISUAL
+# DUAL-AXIS VISUAL (LARGE LABELS)
 # =========================
 fig = go.Figure()
 
-# Net Worth (primary story)
+# Net Worth (right axis)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
@@ -125,56 +129,75 @@ fig.add_trace(go.Scatter(
     line=dict(color="#1f3d4c", width=5, shape="spline"),
     fill="tozeroy",
     fillcolor="rgba(31,61,76,0.15)",
-    hovertemplate="Age %{x}<br>Net Worth: $%{y:,.0f}<extra></extra>"
+    yaxis="y2"
 ))
 
-# Expenses (secondary)
-fig.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Expenses"],
-    name="Expenses",
-    line=dict(color="#c0392b", width=2, dash="dot"),
-    opacity=0.65
-))
+# Expenses (optional)
+if show_expenses:
+    fig.add_trace(go.Scatter(
+        x=df["Age"],
+        y=df["Expenses"],
+        name="Expenses",
+        line=dict(color="#c0392b", width=2, dash="dot"),
+        opacity=0.7,
+        yaxis="y1"
+    ))
 
-# Cash Flow (secondary)
-fig.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Cash Flow"],
-    name="Cash Flow",
-    line=dict(color="#27ae60", width=2),
-    opacity=0.65
-))
+# Cash Flow (optional)
+if show_cashflow:
+    fig.add_trace(go.Scatter(
+        x=df["Age"],
+        y=df["Cash Flow"],
+        name="Cash Flow",
+        line=dict(color="#27ae60", width=2),
+        opacity=0.7,
+        yaxis="y1"
+    ))
 
-# Locked axis ranges
-y_min = min(df["Net Worth"].min(), df["Expenses"].min(), df["Cash Flow"].min()) * 0.9
-y_max = max(df["Net Worth"].max(), df["Expenses"].max(), df["Cash Flow"].max()) * 1.1
+# Axis ranges
+left_min = min(df["Expenses"].min(), df["Cash Flow"].min()) * 0.9
+left_max = max(df["Expenses"].max(), df["Cash Flow"].max()) * 1.1
+right_min = df["Net Worth"].min() * 0.9
+right_max = df["Net Worth"].max() * 1.1
 
 fig.update_layout(
-    height=600,
+    height=650,
     legend=dict(
         orientation="h",
-        y=1.05,
-        font=dict(size=13)
+        y=1.08,
+        font=dict(size=15)
     ),
     xaxis=dict(
         title="Age",
+        titlefont=dict(size=20),
+        tickfont=dict(size=16),
         tickmode="linear",
         dtick=5,
         showgrid=False,
-        fixedrange=True,
-        color="#777"
+        fixedrange=True
     ),
     yaxis=dict(
-        title="Dollars",
-        range=[y_min, y_max],
+        title="Cash Flow / Expenses ($)",
+        titlefont=dict(size=20),
+        tickfont=dict(size=16),
+        range=[left_min, left_max],
         tickprefix="$",
         showgrid=False,
-        fixedrange=True,
-        color="#777"
+        fixedrange=True
+    ),
+    yaxis2=dict(
+        title="Net Worth ($)",
+        titlefont=dict(size=20),
+        tickfont=dict(size=16),
+        overlaying="y",
+        side="right",
+        range=[right_min, right_max],
+        tickprefix="$",
+        showgrid=False,
+        fixedrange=True
     ),
     plot_bgcolor="white",
-    margin=dict(t=40, b=40, l=40, r=40)
+    margin=dict(t=40, b=40, l=60, r=60)
 )
 
 st.plotly_chart(fig, use_container_width=True)
