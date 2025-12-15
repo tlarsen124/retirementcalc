@@ -31,37 +31,45 @@ growth = st.sidebar.slider("Investment Growth (%)", 2.0, 7.0, 5.0) / 100
 inflation = st.sidebar.slider("Expense Inflation (%)", 1.0, 4.0, 2.5) / 100
 
 # ---------------------------
-# PROJECTION LOGIC (NO SPIKE)
+# PROJECTION LOGIC (FIXED)
 # ---------------------------
 ages = np.arange(age, end_age + 1)
 
-liquid_assets = cash + investments
+assets = cash + investments
 home_owned = True
 
 net_worth = []
-expenses_path = []
+expense_path = []
 cashflow_path = []
 
 current_expenses = expenses
 
 for yr in ages:
+    # Home sale (reclassification only)
     if sell_home_age != "Never" and yr == int(sell_home_age):
-        home_owned = False  # reclassification only
+        home_owned = False
 
-    total_assets = liquid_assets + (home_value if home_owned else 0)
+    # Income (assumed zero in retirement)
+    annual_income = income
+
+    # Cash flow
+    cashflow = annual_income - current_expenses
+
+    # Assets evolve with cashflow + growth
+    assets = (assets + cashflow) * (1 + growth)
+
+    total_assets = assets + (home_value if home_owned else 0)
     net_worth.append(total_assets - debt)
 
-    cashflow = income - current_expenses
     cashflow_path.append(cashflow)
+    expense_path.append(current_expenses)
 
-    liquid_assets *= (1 + growth)
-    expenses_path.append(current_expenses)
     current_expenses *= (1 + inflation)
 
 df = pd.DataFrame({
     "Age": ages,
     "Net Worth": net_worth,
-    "Expenses": expenses_path,
+    "Expenses": expense_path,
     "Cash Flow": cashflow_path
 })
 
@@ -72,22 +80,22 @@ st.markdown(
     """
     <h1 style="text-align:center;">Retirement Journey</h1>
     <p style="text-align:center; font-size:18px; color:#555;">
-    A visual path of your financial life
+    A visual path showing how your finances may evolve over time
     </p>
     """,
     unsafe_allow_html=True
 )
 
 # ---------------------------
-# CHART WITH IMAGE BACKGROUND (THIS WORKS)
+# CHART WITH PROPER IMAGE LAYERING
 # ---------------------------
 fig = go.Figure()
 
-# Background image INSIDE plotly
+# Background image INSIDE Plotly
 fig.update_layout(
     images=[
         dict(
-            source="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
+            source="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91",
             xref="paper",
             yref="paper",
             x=0,
@@ -95,12 +103,13 @@ fig.update_layout(
             sizex=1,
             sizey=1,
             sizing="stretch",
-            opacity=0.35,
+            opacity=0.30,
             layer="below"
         )
     ]
 )
 
+# Net Worth (journey curve)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
@@ -110,6 +119,7 @@ fig.add_trace(go.Scatter(
     fillcolor="rgba(47,93,98,0.25)"
 ))
 
+# Expenses (negative)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=-df["Expenses"],
@@ -117,6 +127,7 @@ fig.add_trace(go.Scatter(
     line=dict(color="#c94c4c", width=3)
 ))
 
+# Cash Flow
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Cash Flow"],
@@ -161,7 +172,7 @@ fig.update_layout(
     legend=dict(orientation="h", y=1.08),
     xaxis=dict(title="Age"),
     yaxis=dict(title="Dollars ($)", showgrid=False),
-    plot_bgcolor="rgba(255,255,255,0.85)",
+    plot_bgcolor="rgba(255,255,255,0.88)",
     margin=dict(t=40, b=40, l=60, r=60)
 )
 
