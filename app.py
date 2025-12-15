@@ -26,10 +26,12 @@ st.sidebar.header("Income & Expenses")
 annual_income = st.sidebar.number_input("Annual Income ($)", value=60000, step=5000)
 base_expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=50000, step=5000)
 
-st.sidebar.header("Assets & Liabilities")
-cash = st.sidebar.number_input("Cash ($)", value=100000, step=10000)
-investments = st.sidebar.number_input("Investments ($)", value=600000, step=25000)
+st.sidebar.header("Assets")
+cash_start = st.sidebar.number_input("Cash ($)", value=100000, step=10000)
+investments_start = st.sidebar.number_input("Investments ($)", value=600000, step=25000)
 home_value = st.sidebar.number_input("Home Value ($)", value=500000, step=25000)
+
+st.sidebar.header("Liabilities")
 debt = st.sidebar.number_input("Debt ($)", value=0, step=5000)
 
 st.sidebar.header("Care Planning")
@@ -51,17 +53,16 @@ show_expenses = st.sidebar.checkbox("Show Expenses", True)
 show_cashflow = st.sidebar.checkbox("Show Cash Flow", True)
 show_background = st.sidebar.checkbox("Show Background Image", True)
 
-# ⭐ Image strength slider
 image_opacity = st.sidebar.slider(
     "Background Image Strength",
     min_value=0.30,
-    max_value=0.80,
+    max_value=1.00,
     value=0.65,
     step=0.05
 )
 
 # =========================
-# CARE COSTS
+# CARE COSTS (ANNUAL)
 # =========================
 care_cost_map = {
     "None": 0,
@@ -72,12 +73,12 @@ care_cost_map = {
 base_care_cost = care_cost_map[care_type]
 
 # =========================
-# PROJECTION LOGIC
+# PROJECTION ENGINE (CORRECT)
 # =========================
 ages = np.arange(start_age, end_age + 1)
 
-cash_balance = cash
-investment_balance = investments
+cash = cash_start
+investments = investments_start
 expenses = base_expenses
 care_cost = base_care_cost
 
@@ -86,21 +87,37 @@ expenses_series = []
 cash_flow_series = []
 
 for age in ages:
+    # Total expenses
     total_expenses = expenses
     if care_type != "None" and age >= care_start_age:
         total_expenses += care_cost
 
-    investment_return_amount = investment_balance * investment_return
+    # Investment return (start-of-year balance)
+    investment_return_amount = investments * investment_return
+
+    # Cash flow
     cash_flow = annual_income + investment_return_amount - total_expenses
 
-    cash_balance += cash_flow
-    investment_balance += investment_return_amount
+    # Apply cash flow
+    cash += cash_flow
 
-    net_worth.append(cash_balance + investment_balance + home_value - debt)
+    # If cash goes negative, draw from investments
+    if cash < 0:
+        investments += cash
+        cash = 0
 
+    # Apply investment growth after drawdown
+    investments += investment_return_amount
+
+    # Net worth = ALL assets - liabilities
+    total_assets = cash + investments + home_value
+    net_worth.append(total_assets - debt)
+
+    # Track series
     expenses_series.append(total_expenses)
     cash_flow_series.append(cash_flow)
 
+    # Inflate costs
     expenses *= (1 + expense_inflation)
     care_cost *= (1 + care_inflation)
 
@@ -145,11 +162,12 @@ left_min, left_max = (-1, 1) if not left_values else (
     min(left_values) * 0.9,
     max(left_values) * 1.1
 )
+
 right_min = df["Net Worth"].min() * 0.9
 right_max = df["Net Worth"].max() * 1.1
 
 # =========================
-# FIGURE
+# BUILD CHART
 # =========================
 fig = go.Figure()
 
@@ -187,7 +205,7 @@ if show_cashflow:
     ))
 
 # =========================
-# BACKGROUND IMAGE + GRADIENT MASK
+# BACKGROUND IMAGE
 # =========================
 layout_images = []
 if show_background:
@@ -208,50 +226,32 @@ if show_background:
 
 fig.update_layout(
     images=layout_images,
-    shapes=[
-        # soft white gradient mask (top → bottom)
-        dict(
-            type="rect",
-            xref="paper",
-            yref="paper",
-            x0=0,
-            y0=0,
-            x1=1,
-            y1=1,
-            fillcolor="rgba(255,255,255,0.30)",
-            layer="below",
-            line_width=0
-        )
-    ],
     height=720,
     legend=dict(orientation="h", y=1.1, font=dict(size=18)),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=28)),
-        tickfont=dict(size=22),
+        title=dict(text="Age", font=dict(size=30)),
+        tickfont=dict(size=24),
         tickmode="linear",
         dtick=5,
-        showgrid=False,
         fixedrange=True
     ),
     yaxis=dict(
-        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=28)),
-        tickfont=dict(size=22),
+        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=30)),
+        tickfont=dict(size=24),
         range=[left_min, left_max],
         tickprefix="$",
-        showgrid=False,
         fixedrange=True
     ),
     yaxis2=dict(
-        title=dict(text="Net Worth ($)", font=dict(size=28)),
-        tickfont=dict(size=22),
+        title=dict(text="Net Worth ($)", font=dict(size=30)),
+        tickfont=dict(size=24),
         overlaying="y",
         side="right",
         range=[right_min, right_max],
         tickprefix="$",
-        showgrid=False,
         fixedrange=True
     ),
-    plot_bgcolor="rgba(255,255,255,0.15)",
+    plot_bgcolor="rgba(255,255,255,0.30)",
     margin=dict(t=50, b=50, l=70, r=70)
 )
 
