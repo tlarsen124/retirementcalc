@@ -29,7 +29,17 @@ base_expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=5000
 st.sidebar.header("Assets")
 cash_start = st.sidebar.number_input("Cash ($)", value=100000, step=10000)
 investments_start = st.sidebar.number_input("Investments ($)", value=600000, step=25000)
-home_value = st.sidebar.number_input("Home Value ($)", value=500000, step=25000)
+home_value_start = st.sidebar.number_input("Home Value ($)", value=500000, step=25000)
+
+st.sidebar.header("Home Sale")
+sell_home = st.sidebar.checkbox("Sell Home in Retirement", value=False)
+home_sale_age = st.sidebar.number_input(
+    "Home Sale Age",
+    min_value=start_age,
+    max_value=end_age,
+    value=80,
+    disabled=not sell_home
+)
 
 st.sidebar.header("Liabilities")
 debt = st.sidebar.number_input("Debt ($)", value=0, step=5000)
@@ -79,35 +89,46 @@ ages = np.arange(start_age, end_age + 1)
 
 cash = cash_start
 investments = investments_start
+home_value = home_value_start
 expenses = base_expenses
 care_cost = base_care_cost
 
 net_worth = []
 expenses_series = []
 cash_flow_series = []
+home_series = []
 
 for age in ages:
+    # Sell home at chosen age
+    if sell_home and age == home_sale_age and home_value > 0:
+        investments += home_value
+        home_value = 0
+
+    # Expenses
     total_expenses = expenses
     if care_type != "None" and age >= care_start_age:
         total_expenses += care_cost
 
+    # Investment return
     investment_return_amount = investments * investment_return
-    cash_flow = annual_income + investment_return_amount - total_expenses
 
+    # Cash flow
+    cash_flow = annual_income + investment_return_amount - total_expenses
     cash += cash_flow
 
-    # Draw from investments if cash goes negative
+    # Prevent negative cash
     if cash < 0:
         investments += cash
         cash = 0
 
     investments += investment_return_amount
 
-    # Net worth = all assets - liabilities
+    # Net worth (ALL assets)
     net_worth.append(cash + investments + home_value - debt)
 
     expenses_series.append(total_expenses)
     cash_flow_series.append(cash_flow)
+    home_series.append(home_value)
 
     expenses *= (1 + expense_inflation)
     care_cost *= (1 + care_inflation)
@@ -116,11 +137,12 @@ df = pd.DataFrame({
     "Age": ages,
     "Net Worth": net_worth,
     "Expenses": expenses_series,
-    "Cash Flow": cash_flow_series
+    "Cash Flow": cash_flow_series,
+    "Home Value": home_series
 })
 
 # =========================
-# MILESTONE CALCULATIONS
+# MILESTONES
 # =========================
 start_idx = 0
 peak_idx = df["Net Worth"].idxmax()
@@ -182,7 +204,7 @@ right_max = df["Net Worth"].max() * 1.1
 # =========================
 fig = go.Figure()
 
-# Net Worth Line
+# Net Worth
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
@@ -191,7 +213,7 @@ fig.add_trace(go.Scatter(
     yaxis="y2"
 ))
 
-# Milestone Dots
+# Milestone dots
 for label, idx, color in milestones:
     fig.add_trace(go.Scatter(
         x=[df.loc[idx, "Age"]],
