@@ -119,18 +119,15 @@ c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
 # SAFE AXIS RANGE LOGIC
 # =========================
 left_values = []
-
 if show_expenses:
     left_values.extend(df["Expenses"].values)
-
 if show_cashflow:
     left_values.extend(df["Cash Flow"].values)
 
-if left_values:
-    left_min = min(left_values) * 0.9
-    left_max = max(left_values) * 1.1
-else:
-    left_min, left_max = -1, 1
+left_min, left_max = (-1, 1) if not left_values else (
+    min(left_values) * 0.9,
+    max(left_values) * 1.1
+)
 
 right_min = df["Net Worth"].min() * 0.9
 right_max = df["Net Worth"].max() * 1.1
@@ -140,7 +137,6 @@ right_max = df["Net Worth"].max() * 1.1
 # =========================
 fig = go.Figure()
 
-# Net Worth (Right Axis)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
@@ -151,7 +147,6 @@ fig.add_trace(go.Scatter(
     yaxis="y2"
 ))
 
-# Expenses (Optional)
 if show_expenses:
     fig.add_trace(go.Scatter(
         x=df["Age"],
@@ -162,7 +157,6 @@ if show_expenses:
         yaxis="y1"
     ))
 
-# Cash Flow (Optional)
 if show_cashflow:
     fig.add_trace(go.Scatter(
         x=df["Age"],
@@ -181,8 +175,7 @@ fig.update_layout(
         font=dict(size=15)
     ),
     xaxis=dict(
-        title="Age",
-        titlefont=dict(size=22),
+        title=dict(text="Age", font=dict(size=22)),
         tickfont=dict(size=18),
         tickmode="linear",
         dtick=5,
@@ -190,8 +183,7 @@ fig.update_layout(
         fixedrange=True
     ),
     yaxis=dict(
-        title="Cash Flow / Expenses ($)",
-        titlefont=dict(size=22),
+        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=22)),
         tickfont=dict(size=18),
         range=[left_min, left_max],
         tickprefix="$",
@@ -199,8 +191,7 @@ fig.update_layout(
         fixedrange=True
     ),
     yaxis2=dict(
-        title="Net Worth ($)",
-        titlefont=dict(size=22),
+        title=dict(text="Net Worth ($)", font=dict(size=22)),
         tickfont=dict(size=18),
         overlaying="y",
         side="right",
