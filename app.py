@@ -37,7 +37,6 @@ care_type = st.sidebar.selectbox(
     "Later-Life Care",
     ["None", "Independent Living", "Assisted Living", "Memory Care"]
 )
-
 care_start_age = st.sidebar.number_input(
     "Care Start Age", min_value=start_age, max_value=end_age, value=end_age
 )
@@ -47,13 +46,22 @@ investment_return = st.sidebar.slider("Investment Return (%)", 2.0, 8.0, 5.0) / 
 expense_inflation = st.sidebar.slider("Expense Inflation (%)", 0.0, 5.0, 2.5) / 100
 care_inflation = st.sidebar.slider("Care Cost Inflation (%)", 0.0, 7.0, 3.0) / 100
 
-st.sidebar.header("Chart Options")
-show_expenses = st.sidebar.checkbox("Show Expenses", value=True)
-show_cashflow = st.sidebar.checkbox("Show Cash Flow", value=True)
-show_background = st.sidebar.checkbox("Show Background Image", value=True)
+st.sidebar.header("Chart Controls")
+show_expenses = st.sidebar.checkbox("Show Expenses", True)
+show_cashflow = st.sidebar.checkbox("Show Cash Flow", True)
+show_background = st.sidebar.checkbox("Show Background Image", True)
+
+# ⭐ Image strength slider
+image_opacity = st.sidebar.slider(
+    "Background Image Strength",
+    min_value=0.30,
+    max_value=0.80,
+    value=0.65,
+    step=0.05
+)
 
 # =========================
-# CARE COST ASSUMPTIONS
+# CARE COSTS
 # =========================
 care_cost_map = {
     "None": 0,
@@ -88,8 +96,7 @@ for age in ages:
     cash_balance += cash_flow
     investment_balance += investment_return_amount
 
-    total_assets = cash_balance + investment_balance + home_value
-    net_worth.append(total_assets - debt)
+    net_worth.append(cash_balance + investment_balance + home_value - debt)
 
     expenses_series.append(total_expenses)
     cash_flow_series.append(cash_flow)
@@ -118,7 +125,7 @@ st.markdown(
 )
 
 # =========================
-# SUMMARY METRICS
+# METRICS
 # =========================
 c1, c2, c3 = st.columns(3)
 c1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
@@ -126,35 +133,34 @@ c2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
 c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
 
 # =========================
-# SAFE AXIS RANGES
+# AXIS RANGES
 # =========================
 left_values = []
 if show_expenses:
-    left_values.extend(df["Expenses"].values)
+    left_values.extend(df["Expenses"])
 if show_cashflow:
-    left_values.extend(df["Cash Flow"].values)
+    left_values.extend(df["Cash Flow"])
 
 left_min, left_max = (-1, 1) if not left_values else (
     min(left_values) * 0.9,
     max(left_values) * 1.1
 )
-
 right_min = df["Net Worth"].min() * 0.9
 right_max = df["Net Worth"].max() * 1.1
 
 # =========================
-# BUILD CHART
+# FIGURE
 # =========================
 fig = go.Figure()
 
-# Net Worth (primary)
+# Net Worth
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
     name="Net Worth",
-    line=dict(color="#1f3d4c", width=6, shape="spline"),
+    line=dict(color="#162f3a", width=6, shape="spline"),
     fill="tozeroy",
-    fillcolor="rgba(31,61,76,0.22)",
+    fillcolor="rgba(22,47,58,0.28)",
     yaxis="y2"
 ))
 
@@ -165,7 +171,7 @@ if show_expenses:
         y=df["Expenses"],
         name="Expenses",
         line=dict(color="#c0392b", width=2.5, dash="dot"),
-        opacity=0.8,
+        opacity=0.85,
         yaxis="y1"
     ))
 
@@ -176,12 +182,12 @@ if show_cashflow:
         y=df["Cash Flow"],
         name="Cash Flow",
         line=dict(color="#27ae60", width=2.5),
-        opacity=0.8,
+        opacity=0.85,
         yaxis="y1"
     ))
 
 # =========================
-# LAYOUT + BACKGROUND
+# BACKGROUND IMAGE + GRADIENT MASK
 # =========================
 layout_images = []
 if show_background:
@@ -195,19 +201,30 @@ if show_background:
             sizex=1,
             sizey=1,
             sizing="stretch",
-            opacity=0.5,      # MUCH clearer image
+            opacity=image_opacity,
             layer="below"
         )
     )
 
 fig.update_layout(
     images=layout_images,
-    height=700,
-    legend=dict(
-        orientation="h",
-        y=1.1,
-        font=dict(size=18)
-    ),
+    shapes=[
+        # soft white gradient mask (top → bottom)
+        dict(
+            type="rect",
+            xref="paper",
+            yref="paper",
+            x0=0,
+            y0=0,
+            x1=1,
+            y1=1,
+            fillcolor="rgba(255,255,255,0.30)",
+            layer="below",
+            line_width=0
+        )
+    ],
+    height=720,
+    legend=dict(orientation="h", y=1.1, font=dict(size=18)),
     xaxis=dict(
         title=dict(text="Age", font=dict(size=28)),
         tickfont=dict(size=22),
@@ -234,7 +251,7 @@ fig.update_layout(
         showgrid=False,
         fixedrange=True
     ),
-    plot_bgcolor="rgba(255,255,255,0.45)",  # less washout
+    plot_bgcolor="rgba(255,255,255,0.15)",
     margin=dict(t=50, b=50, l=70, r=70)
 )
 
