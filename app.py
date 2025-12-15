@@ -7,11 +7,11 @@ import base64
 st.set_page_config(page_title="Retirement Financial Overview", layout="wide")
 
 # =========================
-# IMAGE LOADER (SAFE)
+# LOAD BACKGROUND IMAGE
 # =========================
 def load_image_base64(path):
-    with open(path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode()
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
 
 bg_image = load_image_base64("assets/background.jpg")
 
@@ -19,8 +19,7 @@ bg_image = load_image_base64("assets/background.jpg")
 # SIDEBAR INPUTS
 # =========================
 st.sidebar.header("Personal Information")
-
-start_age = st.sidebar.number_input("Current Age", min_value=50, max_value=85, value=65)
+start_age = st.sidebar.number_input("Current Age", 50, 85, 65)
 end_age = 95
 
 st.sidebar.header("Income & Expenses")
@@ -111,7 +110,7 @@ df = pd.DataFrame({
 st.markdown(
     """
     <h1 style="text-align:center;">Retirement Financial Overview</h1>
-    <p style="text-align:center; font-size:20px; color:#666;">
+    <p style="text-align:center; font-size:22px; color:#555;">
     A clear view of net worth, expenses, and cash flow over time
     </p>
     """,
@@ -127,7 +126,7 @@ c2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
 c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
 
 # =========================
-# SAFE AXIS RANGE LOGIC
+# SAFE AXIS RANGES
 # =========================
 left_values = []
 if show_expenses:
@@ -144,7 +143,7 @@ right_min = df["Net Worth"].min() * 0.9
 right_max = df["Net Worth"].max() * 1.1
 
 # =========================
-# DUAL-AXIS CHART
+# BUILD CHART
 # =========================
 fig = go.Figure()
 
@@ -153,9 +152,9 @@ fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
     name="Net Worth",
-    line=dict(color="#1f3d4c", width=5, shape="spline"),
+    line=dict(color="#1f3d4c", width=6, shape="spline"),
     fill="tozeroy",
-    fillcolor="rgba(31,61,76,0.18)",
+    fillcolor="rgba(31,61,76,0.22)",
     yaxis="y2"
 ))
 
@@ -165,8 +164,8 @@ if show_expenses:
         x=df["Age"],
         y=df["Expenses"],
         name="Expenses",
-        line=dict(color="#c0392b", width=2, dash="dot"),
-        opacity=0.75,
+        line=dict(color="#c0392b", width=2.5, dash="dot"),
+        opacity=0.8,
         yaxis="y1"
     ))
 
@@ -176,13 +175,13 @@ if show_cashflow:
         x=df["Age"],
         y=df["Cash Flow"],
         name="Cash Flow",
-        line=dict(color="#27ae60", width=2),
-        opacity=0.75,
+        line=dict(color="#27ae60", width=2.5),
+        opacity=0.8,
         yaxis="y1"
     ))
 
 # =========================
-# LAYOUT + BACKGROUND IMAGE
+# LAYOUT + BACKGROUND
 # =========================
 layout_images = []
 if show_background:
@@ -196,38 +195,38 @@ if show_background:
             sizex=1,
             sizey=1,
             sizing="stretch",
-            opacity=0.25,
+            opacity=0.5,      # MUCH clearer image
             layer="below"
         )
     )
 
 fig.update_layout(
     images=layout_images,
-    height=650,
+    height=700,
     legend=dict(
         orientation="h",
-        y=1.08,
-        font=dict(size=15)
+        y=1.1,
+        font=dict(size=18)
     ),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=22)),
-        tickfont=dict(size=18),
+        title=dict(text="Age", font=dict(size=28)),
+        tickfont=dict(size=22),
         tickmode="linear",
         dtick=5,
         showgrid=False,
         fixedrange=True
     ),
     yaxis=dict(
-        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=22)),
-        tickfont=dict(size=18),
+        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=28)),
+        tickfont=dict(size=22),
         range=[left_min, left_max],
         tickprefix="$",
         showgrid=False,
         fixedrange=True
     ),
     yaxis2=dict(
-        title=dict(text="Net Worth ($)", font=dict(size=22)),
-        tickfont=dict(size=18),
+        title=dict(text="Net Worth ($)", font=dict(size=28)),
+        tickfont=dict(size=22),
         overlaying="y",
         side="right",
         range=[right_min, right_max],
@@ -235,13 +234,13 @@ fig.update_layout(
         showgrid=False,
         fixedrange=True
     ),
-    plot_bgcolor="rgba(255,255,255,0.85)",
-    margin=dict(t=40, b=40, l=60, r=60)
+    plot_bgcolor="rgba(255,255,255,0.45)",  # less washout
+    margin=dict(t=50, b=50, l=70, r=70)
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown(
-    "<p style='text-align:center; color:#777;'>Illustrative projections only.</p>",
+    "<p style='text-align:center; color:#666;'>Illustrative projections only.</p>",
     unsafe_allow_html=True
 )
