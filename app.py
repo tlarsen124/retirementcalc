@@ -2,8 +2,18 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import base64
 
 st.set_page_config(page_title="Retirement Financial Overview", layout="wide")
+
+# =========================
+# IMAGE LOADER (SAFE)
+# =========================
+def load_image_base64(path):
+    with open(path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+bg_image = load_image_base64("assets/background.jpg")
 
 # =========================
 # SIDEBAR INPUTS
@@ -41,6 +51,7 @@ care_inflation = st.sidebar.slider("Care Cost Inflation (%)", 0.0, 7.0, 3.0) / 1
 st.sidebar.header("Chart Options")
 show_expenses = st.sidebar.checkbox("Show Expenses", value=True)
 show_cashflow = st.sidebar.checkbox("Show Cash Flow", value=True)
+show_background = st.sidebar.checkbox("Show Background Image", value=True)
 
 # =========================
 # CARE COST ASSUMPTIONS
@@ -137,37 +148,61 @@ right_max = df["Net Worth"].max() * 1.1
 # =========================
 fig = go.Figure()
 
+# Net Worth (primary)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
     name="Net Worth",
     line=dict(color="#1f3d4c", width=5, shape="spline"),
     fill="tozeroy",
-    fillcolor="rgba(31,61,76,0.15)",
+    fillcolor="rgba(31,61,76,0.18)",
     yaxis="y2"
 ))
 
+# Expenses
 if show_expenses:
     fig.add_trace(go.Scatter(
         x=df["Age"],
         y=df["Expenses"],
         name="Expenses",
         line=dict(color="#c0392b", width=2, dash="dot"),
-        opacity=0.7,
+        opacity=0.75,
         yaxis="y1"
     ))
 
+# Cash Flow
 if show_cashflow:
     fig.add_trace(go.Scatter(
         x=df["Age"],
         y=df["Cash Flow"],
         name="Cash Flow",
         line=dict(color="#27ae60", width=2),
-        opacity=0.7,
+        opacity=0.75,
         yaxis="y1"
     ))
 
+# =========================
+# LAYOUT + BACKGROUND IMAGE
+# =========================
+layout_images = []
+if show_background:
+    layout_images.append(
+        dict(
+            source=f"data:image/jpeg;base64,{bg_image}",
+            xref="paper",
+            yref="paper",
+            x=0,
+            y=1,
+            sizex=1,
+            sizey=1,
+            sizing="stretch",
+            opacity=0.25,
+            layer="below"
+        )
+    )
+
 fig.update_layout(
+    images=layout_images,
     height=650,
     legend=dict(
         orientation="h",
@@ -200,7 +235,7 @@ fig.update_layout(
         showgrid=False,
         fixedrange=True
     ),
-    plot_bgcolor="white",
+    plot_bgcolor="rgba(255,255,255,0.85)",
     margin=dict(t=40, b=40, l=60, r=60)
 )
 
