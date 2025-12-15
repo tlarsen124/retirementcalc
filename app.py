@@ -3,14 +3,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Retirement Overview", layout="wide")
+st.set_page_config(page_title="Retirement Financial Overview", layout="wide")
 
 # =========================
 # SIDEBAR INPUTS
 # =========================
 st.sidebar.header("Personal Information")
 
-start_age = st.sidebar.number_input("Current Age", 50, 85, 65)
+start_age = st.sidebar.number_input("Current Age", min_value=50, max_value=85, value=65)
 end_age = 95
 
 st.sidebar.header("Income & Expenses")
@@ -51,7 +51,6 @@ care_cost_map = {
     "Assisted Living": 60000,
     "Memory Care": 90000
 }
-
 base_care_cost = care_cost_map[care_type]
 
 # =========================
@@ -117,11 +116,31 @@ c2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
 c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
 
 # =========================
-# DUAL-AXIS VISUAL (LARGE LABELS)
+# SAFE AXIS RANGE LOGIC
+# =========================
+left_values = []
+
+if show_expenses:
+    left_values.extend(df["Expenses"].values)
+
+if show_cashflow:
+    left_values.extend(df["Cash Flow"].values)
+
+if left_values:
+    left_min = min(left_values) * 0.9
+    left_max = max(left_values) * 1.1
+else:
+    left_min, left_max = -1, 1
+
+right_min = df["Net Worth"].min() * 0.9
+right_max = df["Net Worth"].max() * 1.1
+
+# =========================
+# DUAL-AXIS CHART
 # =========================
 fig = go.Figure()
 
-# Net Worth (right axis)
+# Net Worth (Right Axis)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
@@ -132,7 +151,7 @@ fig.add_trace(go.Scatter(
     yaxis="y2"
 ))
 
-# Expenses (optional)
+# Expenses (Optional)
 if show_expenses:
     fig.add_trace(go.Scatter(
         x=df["Age"],
@@ -143,7 +162,7 @@ if show_expenses:
         yaxis="y1"
     ))
 
-# Cash Flow (optional)
+# Cash Flow (Optional)
 if show_cashflow:
     fig.add_trace(go.Scatter(
         x=df["Age"],
@@ -154,12 +173,6 @@ if show_cashflow:
         yaxis="y1"
     ))
 
-# Axis ranges
-left_min = min(df["Expenses"].min(), df["Cash Flow"].min()) * 0.9
-left_max = max(df["Expenses"].max(), df["Cash Flow"].max()) * 1.1
-right_min = df["Net Worth"].min() * 0.9
-right_max = df["Net Worth"].max() * 1.1
-
 fig.update_layout(
     height=650,
     legend=dict(
@@ -169,8 +182,8 @@ fig.update_layout(
     ),
     xaxis=dict(
         title="Age",
-        titlefont=dict(size=20),
-        tickfont=dict(size=16),
+        titlefont=dict(size=22),
+        tickfont=dict(size=18),
         tickmode="linear",
         dtick=5,
         showgrid=False,
@@ -178,8 +191,8 @@ fig.update_layout(
     ),
     yaxis=dict(
         title="Cash Flow / Expenses ($)",
-        titlefont=dict(size=20),
-        tickfont=dict(size=16),
+        titlefont=dict(size=22),
+        tickfont=dict(size=18),
         range=[left_min, left_max],
         tickprefix="$",
         showgrid=False,
@@ -187,8 +200,8 @@ fig.update_layout(
     ),
     yaxis2=dict(
         title="Net Worth ($)",
-        titlefont=dict(size=20),
-        tickfont=dict(size=16),
+        titlefont=dict(size=22),
+        tickfont=dict(size=18),
         overlaying="y",
         side="right",
         range=[right_min, right_max],
