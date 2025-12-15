@@ -3,164 +3,151 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="Retirement Journey", layout="wide")
+st.set_page_config(page_title="Retirement Cash Flow & Net Worth", layout="wide")
 
 # =========================
 # SIDEBAR INPUTS
 # =========================
-st.sidebar.header("Your Financial Snapshot")
+st.sidebar.header("Personal Information")
 
-start_age = st.sidebar.number_input("Current Age", min_value=60, max_value=85, value=75)
+start_age = st.sidebar.number_input("Current Age", min_value=50, max_value=80, value=65)
 end_age = 95
 
-annual_income = st.sidebar.number_input("Annual Income ($)", value=0)
-annual_expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=65000)
+st.sidebar.header("Income & Expenses")
+annual_income = st.sidebar.number_input("Annual Income ($)", value=60000, step=5000)
+annual_expenses = st.sidebar.number_input("Annual Living Expenses ($)", value=50000, step=5000)
 
-cash = st.sidebar.number_input("Liquid Cash ($)", value=200000)
-investments = st.sidebar.number_input("Investments ($)", value=650000)
-home_value = st.sidebar.number_input("Home Value ($)", value=700000)
-debt = st.sidebar.number_input("Debt ($)", value=0)
+st.sidebar.header("Assets & Liabilities")
+cash = st.sidebar.number_input("Cash ($)", value=100000, step=10000)
+investments = st.sidebar.number_input("Investments ($)", value=600000, step=25000)
+home_value = st.sidebar.number_input("Home Value ($)", value=500000, step=25000)
+debt = st.sidebar.number_input("Total Debt ($)", value=0, step=5000)
 
-st.sidebar.markdown("---")
-growth = st.sidebar.slider("Investment Growth (%)", 2.0, 7.0, 5.0) / 100
-inflation = st.sidebar.slider("Expense Inflation (%)", 1.0, 4.0, 2.5) / 100
+st.sidebar.header("Assumptions")
+investment_return = st.sidebar.slider("Investment Return (%)", 2.0, 8.0, 5.0) / 100
+expense_inflation = st.sidebar.slider("Expense Inflation (%)", 1.0, 4.0, 2.5) / 100
 
 # =========================
 # PROJECTION LOGIC
 # =========================
 ages = np.arange(start_age, end_age + 1)
 
-assets = cash + investments
+cash_balance = cash
+investment_balance = investments
 expenses = annual_expenses
 
 net_worth = []
+cash_flow_series = []
+expense_series = []
 
 for age in ages:
-    # cash flow affects assets
-    cashflow = annual_income - expenses
-    assets = (assets + cashflow) * (1 + growth)
+    # Investment return
+    investment_return_amount = investment_balance * investment_return
 
-    # total net worth includes home, subtract debt
-    net_worth.append(assets + home_value - debt)
+    # Cash flow calculation
+    cash_flow = (
+        annual_income
+        + investment_return_amount
+        - expenses
+    )
 
-    # expenses inflate
-    expenses *= (1 + inflation)
+    # Update balances
+    cash_balance += cash_flow
+    investment_balance += investment_return_amount
+
+    # Net worth
+    total_assets = cash_balance + investment_balance + home_value
+    net_worth.append(total_assets - debt)
+
+    # Store series
+    cash_flow_series.append(cash_flow)
+    expense_series.append(expenses)
+
+    # Inflate expenses
+    expenses *= (1 + expense_inflation)
 
 df = pd.DataFrame({
     "Age": ages,
-    "Net Worth": net_worth
+    "Net Worth": net_worth,
+    "Cash Flow": cash_flow_series,
+    "Expenses": expense_series
 })
-
-# =========================
-# MILESTONES
-# =========================
-peak_idx = df["Net Worth"].idxmax()
-peak_age = df.loc[peak_idx, "Age"]
-peak_value = df.loc[peak_idx, "Net Worth"]
-
-decline_age = min(peak_age + 7, end_age)
-decline_value = df.loc[df["Age"] == decline_age, "Net Worth"].values[0]
-
-milestones = [
-    (start_age, df.iloc[0]["Net Worth"], "Start:\nstrong position", "#1f7a63"),
-    (peak_age, peak_value, "Peak:\nhighest net worth", "#d4a017"),
-    (decline_age, decline_value, "Noticeable\ndecline", "#8f9779"),
-    (end_age, df.iloc[-1]["Net Worth"], "Time to\nreassess", "#c2a24d"),
-]
 
 # =========================
 # HEADER
 # =========================
 st.markdown(
     """
-    <h1 style="text-align:center; margin-bottom:0;">
-        Retirement Journey
-    </h1>
-    <p style="text-align:center; font-size:18px; color:#555; margin-top:5px;">
-        A visual path of how your financial life may unfold
+    <h1 style="text-align:center;">Retirement Financial Overview</h1>
+    <p style="text-align:center; font-size:18px; color:#555;">
+    How cash flow and net worth evolve over time
     </p>
     """,
     unsafe_allow_html=True
 )
 
 # =========================
-# JOURNEY GRAPH
+# SUMMARY METRICS
+# =========================
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
+col2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
+col3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
+
+# =========================
+# VISUALIZATION
 # =========================
 fig = go.Figure()
 
-# --- Background image INSIDE Plotly ---
-fig.update_layout(
-    images=[
-        dict(
-            source="https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91",
-            xref="paper",
-            yref="paper",
-            x=0,
-            y=1,
-            sizex=1,
-            sizey=1,
-            sizing="stretch",
-            opacity=0.45,          # <-- KEY CHANGE (less washed out)
-            layer="below"
-        )
-    ]
-)
-
-# --- Net worth journey path ---
+# Net Worth (right axis)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
-    mode="lines",
-    line=dict(
-        color="#4f6f73",
-        width=6,
-        shape="spline"
-    ),
-    fill="tozeroy",
-    fillcolor="rgba(79,111,115,0.35)",
-    hovertemplate="Age %{x}<br>Net Worth: $%{y:,.0f}<extra></extra>"
+    name="Net Worth",
+    line=dict(color="#1f77b4", width=4, shape="spline"),
+    yaxis="y2"
 ))
 
-# --- Milestone markers ---
-for age, value, label, color in milestones:
-    fig.add_trace(go.Scatter(
-        x=[age],
-        y=[value],
-        mode="markers+text",
-        marker=dict(
-            size=20,
-            color=color,
-            line=dict(color="white", width=3)
-        ),
-        text=[label],
-        textposition="top center"
-    ))
+# Cash Flow
+fig.add_trace(go.Scatter(
+    x=df["Age"],
+    y=df["Cash Flow"],
+    name="Cash Flow",
+    line=dict(color="#2ca02c", width=3)
+))
 
-# =========================
-# AXIS & LAYOUT STYLING
-# =========================
+# Expenses (negative for visual clarity)
+fig.add_trace(go.Scatter(
+    x=df["Age"],
+    y=-df["Expenses"],
+    name="Expenses",
+    line=dict(color="#d62728", width=3)
+))
+
 fig.update_layout(
-    height=720,
-    showlegend=False,
-    xaxis=dict(
-        tickmode="array",
-        tickvals=[75, 80, 90, 95],
-        ticktext=["75", "80", "90", "95"],
-        showgrid=False,
-        zeroline=False
-    ),
+    height=650,
+    legend=dict(orientation="h", y=1.1),
+    xaxis=dict(title="Age"),
     yaxis=dict(
-        showgrid=False,
-        showticklabels=False,
-        zeroline=False
+        title="Annual Cash Flow / Expenses",
+        tickprefix="$",
+        showgrid=True
     ),
-    plot_bgcolor="rgba(255,255,255,0.82)",  # lighter overlay, not grey
-    margin=dict(t=30, b=60, l=40, r=40)
+    yaxis2=dict(
+        title="Net Worth",
+        overlaying="y",
+        side="right",
+        tickprefix="$",
+        showgrid=False
+    ),
+    plot_bgcolor="white",
+    margin=dict(l=60, r=60, t=80, b=40)
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
 st.markdown(
-    "<p style='text-align:center; color:#666;'>Illustrative example for planning purposes only.</p>",
+    "<p style='text-align:center; color:#666;'>All figures are projections for illustrative purposes only.</p>",
     unsafe_allow_html=True
 )
