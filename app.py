@@ -62,7 +62,7 @@ image_opacity = st.sidebar.slider(
 )
 
 # =========================
-# CARE COSTS (ANNUAL)
+# CARE COSTS
 # =========================
 care_cost_map = {
     "None": 0,
@@ -73,7 +73,7 @@ care_cost_map = {
 base_care_cost = care_cost_map[care_type]
 
 # =========================
-# PROJECTION ENGINE (CORRECT)
+# PROJECTION LOGIC
 # =========================
 ages = np.arange(start_age, end_age + 1)
 
@@ -87,37 +87,29 @@ expenses_series = []
 cash_flow_series = []
 
 for age in ages:
-    # Total expenses
     total_expenses = expenses
     if care_type != "None" and age >= care_start_age:
         total_expenses += care_cost
 
-    # Investment return (start-of-year balance)
     investment_return_amount = investments * investment_return
-
-    # Cash flow
     cash_flow = annual_income + investment_return_amount - total_expenses
 
-    # Apply cash flow
     cash += cash_flow
 
-    # If cash goes negative, draw from investments
+    # Draw from investments if cash goes negative
     if cash < 0:
         investments += cash
         cash = 0
 
-    # Apply investment growth after drawdown
     investments += investment_return_amount
 
-    # Net worth = ALL assets - liabilities
+    # ✅ Net worth = ALL assets − liabilities
     total_assets = cash + investments + home_value
     net_worth.append(total_assets - debt)
 
-    # Track series
     expenses_series.append(total_expenses)
     cash_flow_series.append(cash_flow)
 
-    # Inflate costs
     expenses *= (1 + expense_inflation)
     care_cost *= (1 + care_inflation)
 
@@ -167,22 +159,19 @@ right_min = df["Net Worth"].min() * 0.9
 right_max = df["Net Worth"].max() * 1.1
 
 # =========================
-# BUILD CHART
+# BUILD CHART (CLEAN)
 # =========================
 fig = go.Figure()
 
-# Net Worth
+# Net Worth (NO fill = no stripes)
 fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
     name="Net Worth",
     line=dict(color="#162f3a", width=6, shape="spline"),
-    fill="tozeroy",
-    fillcolor="rgba(22,47,58,0.28)",
     yaxis="y2"
 ))
 
-# Expenses
 if show_expenses:
     fig.add_trace(go.Scatter(
         x=df["Age"],
@@ -193,7 +182,6 @@ if show_expenses:
         yaxis="y1"
     ))
 
-# Cash Flow
 if show_cashflow:
     fig.add_trace(go.Scatter(
         x=df["Age"],
@@ -233,6 +221,8 @@ fig.update_layout(
         tickfont=dict(size=24),
         tickmode="linear",
         dtick=5,
+        showgrid=False,
+        zeroline=False,
         fixedrange=True
     ),
     yaxis=dict(
@@ -240,6 +230,8 @@ fig.update_layout(
         tickfont=dict(size=24),
         range=[left_min, left_max],
         tickprefix="$",
+        showgrid=False,
+        zeroline=False,
         fixedrange=True
     ),
     yaxis2=dict(
@@ -249,6 +241,8 @@ fig.update_layout(
         side="right",
         range=[right_min, right_max],
         tickprefix="$",
+        showgrid=False,
+        zeroline=False,
         fixedrange=True
     ),
     plot_bgcolor="rgba(255,255,255,0.30)",
