@@ -223,6 +223,21 @@ fig.add_trace(go.Scatter(
     yaxis="y2"
 ))
 
+# Milestone dots
+for label, idx, color in milestones:
+    fig.add_trace(go.Scatter(
+        x=[df.loc[idx, "Age"]],
+        y=[df.loc[idx, "Net Worth"]],
+        mode="markers+text",
+        marker=dict(size=20, color=color, line=dict(color="white", width=3)),
+        text=[label],
+        textposition="top center",
+        textfont=dict(size=14),
+        yaxis="y2",
+        showlegend=False
+    ))
+
+
 # Expenses
 fig.add_trace(go.Scatter(
     x=df["Age"],
