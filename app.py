@@ -556,7 +556,4 @@ st.plotly_chart(
     }
 )
 
-# =========================
-# CHART 2: ACCOUNT BALANCES (requested)
-# =========================
-fig
+
