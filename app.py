@@ -2,8 +2,18 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import base64
 
 st.set_page_config(page_title="Retirement Overview", layout="wide")
+
+# =========================
+# BACKGROUND IMAGE
+# =========================
+def load_image_base64(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+bg_image = load_image_base64("assets/background.jpg")
 
 # =========================
 # SIDEBAR INPUTS
@@ -56,6 +66,10 @@ cap_gains_rate = st.sidebar.slider("Capital Gains Tax (%)", 0.0, 40.0, 25.0) / 1
 living_infl = st.sidebar.slider("Living Inflation (%)", 0.0, 6.0, 3.0) / 100
 stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, 7.0) / 100
 cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, 4.5) / 100
+
+st.sidebar.subheader("Chart Appearance")
+show_background = st.sidebar.checkbox("Show Background Image", True)
+image_opacity = st.sidebar.slider("Background Image Opacity", 0.30, 1.00, 0.65, 0.05)
 
 # =========================
 # PROJECTION
@@ -116,14 +130,12 @@ for i, age in enumerate(ages):
         take_cash = min(cash, deficit)
         cash -= take_cash
         deficit -= take_cash
-
         if deficit > 0:
             ira -= deficit
 
-    # Net worth
     total_assets = cash + ira + home_value
-    net_worth.append(total_assets)
 
+    net_worth.append(total_assets)
     expenses_series.append(expenses)
     cashflow_series.append(cash_flow)
     cash_series.append(cash)
@@ -159,39 +171,45 @@ c2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
 c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
 
 # =========================
-# CHART 1: NET WORTH + CASH FLOW
+# BACKGROUND IMAGE CONFIG
+# =========================
+layout_images = []
+if show_background:
+    layout_images.append(dict(
+        source=f"data:image/jpeg;base64,{bg_image}",
+        xref="paper",
+        yref="paper",
+        x=0,
+        y=1,
+        sizex=1,
+        sizey=1,
+        sizing="stretch",
+        opacity=image_opacity,
+        layer="below"
+    ))
+
+# =========================
+# CHART 1
 # =========================
 fig = go.Figure()
 
-fig.add_trace(go.Scatter(
-    x=df["Age"], y=df["Net Worth"],
-    name="Net Worth",
-    line=dict(width=5)
-))
-
-fig.add_trace(go.Scatter(
-    x=df["Age"], y=df["Expenses"],
-    name="Expenses",
-    line=dict(dash="dot")
-))
-
-fig.add_trace(go.Scatter(
-    x=df["Age"], y=df["Cash Flow"],
-    name="Cash Flow"
-))
+fig.add_trace(go.Scatter(x=df["Age"], y=df["Net Worth"], name="Net Worth", line=dict(width=5)))
+fig.add_trace(go.Scatter(x=df["Age"], y=df["Expenses"], name="Expenses", line=dict(dash="dot")))
+fig.add_trace(go.Scatter(x=df["Age"], y=df["Cash Flow"], name="Cash Flow"))
 
 fig.update_layout(
+    images=layout_images,
     height=600,
     xaxis=dict(title="Age", tickfont=dict(size=18)),
     yaxis=dict(title="Dollars", tickfont=dict(size=18), tickprefix="$"),
     legend=dict(orientation="h"),
-    plot_bgcolor="white"
+    plot_bgcolor="rgba(255,255,255,0.35)"
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# CHART 2: ASSETS
+# CHART 2
 # =========================
 fig2 = go.Figure()
 
@@ -200,14 +218,12 @@ fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA / Stocks"], name="IRA / Stocks"
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", line=dict(dash="dot")))
 
 fig2.update_layout(
+    images=layout_images,
     height=600,
     xaxis=dict(title="Age", tickfont=dict(size=18)),
     yaxis=dict(title="Value", tickfont=dict(size=18), tickprefix="$"),
     legend=dict(orientation="h"),
-    plot_bgcolor="white"
+    plot_bgcolor="rgba(255,255,255,0.35)"
 )
 
 st.plotly_chart(fig2, use_container_width=True)
-
-with st.expander("Show Data Table"):
-    st.dataframe(df)
