@@ -285,3 +285,22 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
+
+# =========================
+fig2 = go.Figure()
+
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["Cash"], name="Cash"))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA / Stocks"], name="IRA / Stocks"))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", line=dict(dash="dot")))
+
+fig2.update_layout(
+    images=layout_images,
+    height=600,
+    xaxis=dict(title="Age", tickfont=dict(size=18)),
+    yaxis=dict(title="Value", tickfont=dict(size=18), tickprefix="$"),
+    legend=dict(orientation="h"),
+    plot_bgcolor="rgba(255,255,255,0.35)"
+)
+
+st.plotly_chart(fig2, use_container_width=True)
