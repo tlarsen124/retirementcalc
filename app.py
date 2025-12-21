@@ -96,7 +96,7 @@ single = st.sidebar.checkbox("Single", value=True)
 qualified_121 = st.sidebar.checkbox("121 Qualified Property", value=True)
 
 default_121 = 250000 if single else 500000
-exclusion_121 = st.sidebar.number_input("121 Tax Deduction / Exclusion ($)", value=float(default_121), step=10000)
+exclusion_121 = st.sidebar.number_input("121 Tax Deduction / Exclusion ($)", value=float(default_121), step=10000.0)
 
 sell_home = st.sidebar.checkbox("Sell home", value=True if home_status != "Do not own" else False, disabled=(home_status == "Do not own"))
 sell_in_years = st.sidebar.number_input(
