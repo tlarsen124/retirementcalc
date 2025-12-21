@@ -153,6 +153,27 @@ df = pd.DataFrame({
 })
 
 # =========================
+# MILESTONES
+# =========================
+start_idx = 0
+peak_idx = df["Net Worth"].idxmax()
+mid_idx = int((start_idx + peak_idx) / 2)
+
+decline_candidates = df.loc[peak_idx:]
+decline_idx = decline_candidates[
+    decline_candidates["Net Worth"] < 0.9 * df.loc[peak_idx, "Net Worth"]
+].index
+decline_idx = decline_idx[0] if len(decline_idx) > 0 else df.index[-1]
+
+milestones = [
+    ("Start", start_idx, "#2c3e50"),
+    ("Building Wealth", mid_idx, "#27ae60"),
+    ("Peak Net Worth", peak_idx, "#f1c40f"),
+    ("Reassessment Phase", decline_idx, "#e67e22"),
+]
+
+
+# =========================
 # HEADER
 # =========================
 st.markdown(
@@ -304,3 +325,27 @@ fig2.update_layout(
 )
 
 st.plotly_chart(fig2, use_container_width=True)
+
+# =========================
+# DATA TABLE (COLLAPSIBLE)
+# =========================
+with st.expander("Show Projection Data"):
+    display_df = df.copy()
+
+    currency_cols = [
+        "Net Worth",
+        "Expenses",
+        "Cash Flow",
+        "Cash",
+        "IRA / Stocks",
+        "Home Value"
+    ]
+
+    for col in currency_cols:
+        display_df[col] = display_df[col].map(lambda x: f"${x:,.0f}")
+
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        height=400
+    )
