@@ -89,6 +89,14 @@ if home_status == "Own with mortgage":
         mortgage_term_years = st.number_input("Remaining Term (yrs)", value=11, min_value=1, max_value=40)
         mortgage_rate = st.number_input("Existing Mortgage Rate (%)", value=2.40, step=0.05) / 100.0
 
+st.sidebar.markdown("---")
+st.sidebar.subheader("Liabilities")
+debt = st.sidebar.number_input(
+    "Other Debt ($)",
+    value=0.0,
+    step=5000.0
+)
+
 # Section 121 assumptions
 st.sidebar.markdown("---")
 st.sidebar.subheader("Home Sale Tax Assumptions")
