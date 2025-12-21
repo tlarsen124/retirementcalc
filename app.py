@@ -189,41 +189,99 @@ if show_background:
     ))
 
 # =========================
-# CHART 1
+# BUILD CHART (FORMATTING TEMPLATE)
 # =========================
 fig = go.Figure()
 
-fig.add_trace(go.Scatter(x=df["Age"], y=df["Net Worth"], name="Net Worth", line=dict(width=5)))
-fig.add_trace(go.Scatter(x=df["Age"], y=df["Expenses"], name="Expenses", line=dict(dash="dot")))
-fig.add_trace(go.Scatter(x=df["Age"], y=df["Cash Flow"], name="Cash Flow"))
+# Net Worth (right axis)
+fig.add_trace(go.Scatter(
+    x=df["Age"],
+    y=df["Net Worth"],
+    name="Net Worth",
+    line=dict(color="#162f3a", width=6, shape="spline"),
+    yaxis="y2"
+))
 
+# Expenses
+fig.add_trace(go.Scatter(
+    x=df["Age"],
+    y=df["Expenses"],
+    name="Expenses",
+    line=dict(color="#c0392b", width=2.5, dash="dot"),
+    opacity=0.85,
+    yaxis="y1"
+))
+
+# Cash Flow
+fig.add_trace(go.Scatter(
+    x=df["Age"],
+    y=df["Cash Flow"],
+    name="Cash Flow",
+    line=dict(color="#27ae60", width=2.5),
+    opacity=0.85,
+    yaxis="y1"
+))
+
+# =========================
+# BACKGROUND IMAGE
+# =========================
+layout_images = []
+if show_background:
+    layout_images.append(
+        dict(
+            source=f"data:image/jpeg;base64,{bg_image}",
+            xref="paper",
+            yref="paper",
+            x=0,
+            y=1,
+            sizex=1,
+            sizey=1,
+            sizing="stretch",
+            opacity=image_opacity,
+            layer="below"
+        )
+    )
+
+# =========================
+# LAYOUT (NO GRIDLINES)
+# =========================
 fig.update_layout(
     images=layout_images,
-    height=600,
-    xaxis=dict(title="Age", tickfont=dict(size=18)),
-    yaxis=dict(title="Dollars", tickfont=dict(size=18), tickprefix="$"),
-    legend=dict(orientation="h"),
-    plot_bgcolor="rgba(255,255,255,0.35)"
+    height=720,
+    legend=dict(
+        orientation="h",
+        y=1.12,
+        font=dict(size=18)
+    ),
+    xaxis=dict(
+        title=dict(text="Age", font=dict(size=30)),
+        tickfont=dict(size=24),
+        tickmode="linear",
+        dtick=5,
+        showgrid=False,
+        zeroline=False,
+        fixedrange=True
+    ),
+    yaxis=dict(
+        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=30)),
+        tickfont=dict(size=24),
+        tickprefix="$",
+        showgrid=False,
+        zeroline=False,
+        fixedrange=True
+    ),
+    yaxis2=dict(
+        title=dict(text="Net Worth ($)", font=dict(size=30)),
+        tickfont=dict(size=24),
+        overlaying="y",
+        side="right",
+        tickprefix="$",
+        showgrid=False,
+        zeroline=False,
+        fixedrange=True
+    ),
+    plot_bgcolor="rgba(255,255,255,0.30)",
+    margin=dict(t=50, b=50, l=70, r=70)
 )
 
 st.plotly_chart(fig, use_container_width=True)
-
-# =========================
-# CHART 2
-# =========================
-fig2 = go.Figure()
-
-fig2.add_trace(go.Scatter(x=df["Age"], y=df["Cash"], name="Cash"))
-fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA / Stocks"], name="IRA / Stocks"))
-fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", line=dict(dash="dot")))
-
-fig2.update_layout(
-    images=layout_images,
-    height=600,
-    xaxis=dict(title="Age", tickfont=dict(size=18)),
-    yaxis=dict(title="Value", tickfont=dict(size=18), tickprefix="$"),
-    legend=dict(orientation="h"),
-    plot_bgcolor="rgba(255,255,255,0.35)"
-)
-
-st.plotly_chart(fig2, use_container_width=True)
