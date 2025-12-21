@@ -6,454 +6,410 @@ import base64
 
 st.set_page_config(page_title="Retirement Financial Overview", layout="wide")
 
-# =========================
-# LOAD BACKGROUND IMAGE
-# =========================
+# ============================================================
+# Helpers
+# ============================================================
 def load_image_base64(path: str) -> str:
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
-# If your image is always present in repo at this path:
-BG_PATH = "assets/background.jpg"
-bg_image = load_image_base64(BG_PATH)
-
-# =========================
-# HELPER FUNCTIONS
-# =========================
-def money(x) -> str:
+def safe_float(x, default=0.0):
     try:
-        return f"${x:,.0f}"
+        return float(x)
     except Exception:
-        return str(x)
+        return default
 
-def annual_payment_from_loan(balance: float, annual_rate: float, term_years: int) -> float:
-    """
-    Standard amortizing loan annual payment approximation using monthly payment * 12.
-    """
-    if balance <= 0 or term_years <= 0:
+def annual_payment(principal: float, annual_rate: float, years: int) -> float:
+    """Standard amortizing loan annual payment."""
+    if years <= 0 or principal <= 0:
         return 0.0
-    r_m = annual_rate / 12.0
-    n = term_years * 12
-    if r_m <= 0:
-        return balance / max(n, 1) * 12.0
-    pmt_m = balance * (r_m * (1 + r_m) ** n) / ((1 + r_m) ** n - 1)
-    return pmt_m * 12.0
+    r = annual_rate
+    if r <= 0:
+        return principal / years
+    return principal * (r * (1 + r) ** years) / ((1 + r) ** years - 1)
 
-def apply_annual_amortization(balance: float, annual_rate: float, annual_payment: float) -> float:
-    """
-    One-year amortization step:
-      - interest on starting balance
-      - principal reduction = payment - interest
-    """
-    if balance <= 0:
-        return 0.0
+def amortize_one_year(balance: float, annual_rate: float, annual_pmt: float) -> tuple[float, float, float]:
+    """Return (new_balance, interest_paid, principal_paid) for one year."""
+    if balance <= 0 or annual_pmt <= 0:
+        return max(balance, 0.0), 0.0, 0.0
     interest = balance * annual_rate
-    principal = max(annual_payment - interest, 0.0)
+    principal = max(annual_pmt - interest, 0.0)
     new_balance = max(balance - principal, 0.0)
-    return new_balance
+    return new_balance, interest, principal
 
-def compute_home_sale_net_proceeds(
-    sale_price: float,
-    sale_cost_pct: float,
-    original_cost_basis: float,
-    improvements: float,
-    section121_qualified: bool,
-    section121_deduction: float,
-    cap_gains_rate: float,
-    mortgage_balance: float
-) -> dict:
-    """
-    Implements your rule:
-    - Subtract cost basis, 121 deduction, sale cost, and improvements before taxes on the home sale.
-    - Tax applies to taxable gain only (not to total proceeds).
-    - Mortgage payoff reduces net cash proceeds (but not taxable gain).
-    """
-    sale_cost = sale_price * sale_cost_pct
-    exclusion = section121_deduction if section121_qualified else 0.0
+def care_level_for_year(
+    current_age: int,
+    start_age: int,
+    yrs_to_ind: int | None,
+    yrs_to_assist: int | None,
+    yrs_to_memory: int | None
+) -> str:
+    """Returns one of: 'None', 'Independent', 'Assisted', 'Memory'."""
+    level = "None"
+    if yrs_to_ind is not None and current_age >= start_age + yrs_to_ind:
+        level = "Independent"
+    if yrs_to_assist is not None and current_age >= start_age + yrs_to_assist:
+        level = "Assisted"
+    if yrs_to_memory is not None and current_age >= start_age + yrs_to_memory:
+        level = "Memory"
+    return level
 
-    taxable_gain = sale_price - sale_cost - original_cost_basis - improvements - exclusion
-    taxable_gain = max(taxable_gain, 0.0)
-    tax = taxable_gain * cap_gains_rate
+# ============================================================
+# Background image
+# ============================================================
+bg_image = load_image_base64("assets/background.jpg")
 
-    net_proceeds = sale_price - sale_cost - tax - mortgage_balance
-    net_proceeds = max(net_proceeds, 0.0)
-
-    return {
-        "sale_price": sale_price,
-        "sale_cost": sale_cost,
-        "taxable_gain": taxable_gain,
-        "tax": tax,
-        "mortgage_payoff": mortgage_balance,
-        "net_proceeds": net_proceeds
-    }
-
-def pick_withdrawal_order(option: str) -> list:
-    """
-    Returns a list of buckets in depletion order for deficits.
-    Cash is always used first.
-    Home Account is disallowed before sale (handled in simulation).
-    """
-    # Cash first always, then pick the rest
-    if option == "Money Market → IRA → Home Account":
-        return ["cash", "money_market", "ira", "home_account"]
-    if option == "Money Market → Home Account → IRA":
-        return ["cash", "money_market", "home_account", "ira"]
-    if option == "IRA → Money Market → Home Account":
-        return ["cash", "ira", "money_market", "home_account"]
-    if option == "IRA → Home Account → Money Market":
-        return ["cash", "ira", "home_account", "money_market"]
-    if option == "Home Account → Money Market → IRA":
-        return ["cash", "home_account", "money_market", "ira"]
-    if option == "Home Account → IRA → Money Market":
-        return ["cash", "home_account", "ira", "money_market"]
-    # default
-    return ["cash", "money_market", "ira", "home_account"]
-
-# =========================
-# SIDEBAR INPUTS
-# =========================
+# ============================================================
+# Sidebar Inputs
+# ============================================================
 st.sidebar.header("Key Assumptions")
-
-current_age = st.sidebar.number_input("Age", min_value=50, max_value=95, value=70)
+start_age = st.sidebar.number_input("Age", min_value=50, max_value=95, value=70)
 end_age = 95
 
-own_home = st.sidebar.selectbox("Do you own your home?", ["Yes", "No"], index=1)
-
-colA, colB = st.sidebar.columns(2)
-single = colA.selectbox("Single", ["Yes", "No"], index=0)
-section121_qualified = colB.selectbox("121 Qualified Property", ["Yes", "No"], index=0)
-
-# Home inputs (only if owning a home)
-if own_home == "Yes":
-    st.sidebar.subheader("Home Details")
-    original_cost_basis = st.sidebar.number_input("Original Cost Basis ($)", value=550000, step=25000)
-    home_value_now = st.sidebar.number_input("Value Now ($)", value=1100000, step=50000)
-    improvements = st.sidebar.number_input("Improvements ($)", value=50000, step=5000)
-    mortgage_left = st.sidebar.number_input("Mortgage Left ($)", value=0, step=10000)
-
-    # 121 deduction default depends on single/married
-    default_121 = 250000 if single == "Yes" else 500000
-    section121_deduction = st.sidebar.number_input("121 Tax Deduction ($)", value=float(default_121), step=50000)
-
-    st.sidebar.subheader("Sell Home")
-    sell_home = st.sidebar.selectbox("Sell home", ["Yes", "No"], index=0)
-    sell_in_years = st.sidebar.number_input("Sell home in (x) years", min_value=0, max_value=60, value=5)
-    sale_cost_pct = st.sidebar.slider("Sale Cost %", min_value=0.0, max_value=12.0, value=6.0, step=0.5) / 100.0
-else:
-    # dummy values
-    original_cost_basis = 0.0
-    home_value_now = 0.0
-    improvements = 0.0
-    mortgage_left = 0.0
-    section121_deduction = 0.0
-    sell_home = "No"
-    sell_in_years = 0
-    sale_cost_pct = 0.0
-
-# Mortgage details expander (only if there is a mortgage)
-mortgage_balance_input = float(mortgage_left) if own_home == "Yes" else 0.0
-mortgage_term_years = 0
-mortgage_rate = 0.0
-
-if own_home == "Yes" and mortgage_balance_input > 0:
-    with st.sidebar.expander("Mortgage Details (optional)"):
-        mortgage_balance_input = st.number_input("Existing Mortgage Balance ($)", value=float(mortgage_balance_input), step=10000.0)
-        mortgage_term_years = st.number_input("Remaining Term (yrs)", min_value=1, max_value=40, value=11)
-        mortgage_rate = st.number_input("Existing Mortgage Rate (%)", value=2.40, step=0.10) / 100.0
-
-st.sidebar.header("Income (Monthly)")
-ssn_m = st.sidebar.number_input("SSN ($/mo)", value=1300, step=100)
-pension_m = st.sidebar.number_input("Pension ($/mo)", value=2300, step=100)
-employment_m = st.sidebar.number_input("Employment ($/mo)", value=0, step=100)
-other_income_m = st.sidebar.number_input("Other Income ($/mo)", value=0, step=100)
-rental_net_m = st.sidebar.number_input("Rental Income (net) ($/mo)", value=0, step=100)
-
-st.sidebar.header("Investments")
-cash_start = st.sidebar.number_input("Cash ($)", value=45000, step=5000)
-money_market_start = st.sidebar.number_input("Money Market ($)", value=100000, step=5000)
-ira_start = st.sidebar.number_input("IRA ($)", value=1200000, step=25000)
-other_investments = st.sidebar.number_input("Other Investments ($)", value=0, step=5000)
-
-st.sidebar.header("Living Expenses")
-living_monthly = st.sidebar.number_input("Average monthly ($)", value=3151, step=100)
-
-st.sidebar.header("Care Timeline (years from now)")
-independent_in_years = st.sidebar.number_input("Independent Living in (X) years", min_value=0, max_value=60, value=2)
-assisted_in_years = st.sidebar.number_input("Assisted Living in (X) years", min_value=0, max_value=60, value=10)
-memory_in_years = st.sidebar.number_input("Memory Care in (X) years", min_value=0, max_value=60, value=20)
-
-st.sidebar.subheader("Care Costs (Annual, today)")
-independent_cost_annual = st.sidebar.number_input("Independent Living ($/yr)", value=50000, step=2500)
-assisted_cost_annual = st.sidebar.number_input("Assisted Living ($/yr)", value=60000, step=2500)
-memory_cost_annual = st.sidebar.number_input("Memory Care ($/yr)", value=90000, step=2500)
-
-st.sidebar.header("Taxes")
-avg_tax_rate = st.sidebar.slider("Average tax rate (%)", 0.0, 50.0, 30.0, 0.5) / 100.0
-cap_gains_rate = st.sidebar.slider("Capital gain tax rate (%)", 0.0, 50.0, 25.0, 0.5) / 100.0
-
-st.sidebar.header("Inflation")
-living_infl = st.sidebar.slider("Living (%)", 0.0, 8.0, 3.0, 0.25) / 100.0
-care_infl = st.sidebar.slider("Care (%)", 0.0, 10.0, 5.0, 0.25) / 100.0
-
-st.sidebar.header("Growth")
-stocks_after_home_sale = st.sidebar.slider("Stocks after home sale (%)", 0.0, 12.0, 7.0, 0.25) / 100.0
-ira_growth = st.sidebar.slider("IRA (%)", 0.0, 12.0, 7.0, 0.25) / 100.0
-money_market_growth = st.sidebar.slider("Money Market (%)", 0.0, 8.0, 4.5, 0.25) / 100.0
-home_growth = st.sidebar.slider("Home Value (%)", 0.0, 10.0, 4.0, 0.25) / 100.0
-
-st.sidebar.header("Withdrawal Strategy")
-withdrawal_option = st.sidebar.selectbox(
-    "If expenses exceed income, deplete from:",
-    [
-        "Money Market → IRA → Home Account",
-        "Money Market → Home Account → IRA",
-        "IRA → Money Market → Home Account",
-        "IRA → Home Account → Money Market",
-        "Home Account → Money Market → IRA",
-        "Home Account → IRA → Money Market",
-    ],
+home_status = st.sidebar.radio(
+    "Home Situation",
+    ["Do not own", "Own outright", "Own with mortgage"],
     index=0
 )
 
-st.sidebar.header("Chart Controls")
+st.sidebar.markdown("---")
+st.sidebar.subheader("Home Details")
+original_cost_basis = st.sidebar.number_input("Original Cost Basis ($)", value=550000, step=10000)
+home_value_now = st.sidebar.number_input("Value Now ($)", value=1100000, step=25000)
+improvements = st.sidebar.number_input("Improvements ($)", value=50000, step=5000)
+
+# Mortgage (only if "Own with mortgage")
+mortgage_balance = 0.0
+mortgage_term_years = 0
+mortgage_rate = 0.0
+
+if home_status == "Own with mortgage":
+    with st.sidebar.expander("Mortgage Details", expanded=True):
+        mortgage_balance = st.number_input("Existing Mortgage Balance ($)", value=420000.0, step=10000.0, format="%.2f")
+        mortgage_term_years = st.number_input("Remaining Term (yrs)", value=11, min_value=1, max_value=40)
+        mortgage_rate = st.number_input("Existing Mortgage Rate (%)", value=2.40, step=0.05) / 100.0
+
+# Section 121 assumptions
+st.sidebar.markdown("---")
+st.sidebar.subheader("Home Sale Tax Assumptions")
+single = st.sidebar.checkbox("Single", value=True)
+qualified_121 = st.sidebar.checkbox("121 Qualified Property", value=True)
+
+default_121 = 250000 if single else 500000
+exclusion_121 = st.sidebar.number_input("121 Tax Deduction / Exclusion ($)", value=float(default_121), step=10000)
+
+sell_home = st.sidebar.checkbox("Sell home", value=True if home_status != "Do not own" else False, disabled=(home_status == "Do not own"))
+sell_in_years = st.sidebar.number_input(
+    "Sell home in (x) years",
+    min_value=0,
+    max_value=max(0, end_age - start_age),
+    value=5,
+    disabled=not sell_home
+)
+
+sale_cost_pct = st.sidebar.number_input("Sale Cost %", value=6.0, step=0.25) / 100.0
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Income (Monthly)")
+ssn_m = st.sidebar.number_input("SSN ($/mo)", value=1300, step=50)
+pension_m = st.sidebar.number_input("Pension ($/mo)", value=2300, step=50)
+employment_m = st.sidebar.number_input("Employment ($/mo)", value=0, step=100)
+other_income_m = st.sidebar.number_input("Other Income ($/mo)", value=0, step=100)
+rental_income_m = st.sidebar.number_input("Rental Income (net) ($/mo)", value=0, step=100)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Investments")
+cash_start = st.sidebar.number_input("Cash ($)", value=45000, step=5000)
+money_market_start = st.sidebar.number_input("Money Market ($)", value=100000, step=5000)
+ira_start = st.sidebar.number_input("IRA ($)", value=1200000, step=25000)
+other_taxable_start = st.sidebar.number_input("Other Investments (Taxable) ($)", value=0, step=5000)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Living Expenses")
+living_monthly = st.sidebar.number_input("Average Monthly ($)", value=3151, step=50)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Care Transitions (years from now)")
+yrs_to_ind = st.sidebar.number_input("Independent Living in (years)", value=2, min_value=0, max_value=60)
+yrs_to_assist = st.sidebar.number_input("Assisted Living in (years)", value=10, min_value=0, max_value=60)
+yrs_to_memory = st.sidebar.number_input("Memory Care in (years)", value=20, min_value=0, max_value=60)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Taxes")
+avg_tax_rate = st.sidebar.number_input("Average Tax Rate (%)", value=30.0, step=0.5) / 100.0
+cap_gains_rate = st.sidebar.number_input("Capital Gain Tax Rate (%)", value=25.0, step=0.5) / 100.0
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Inflation & Growth")
+infl_living = st.sidebar.number_input("Living Inflation (%)", value=3.0, step=0.25) / 100.0
+infl_care = st.sidebar.number_input("Care Inflation (%)", value=5.0, step=0.25) / 100.0
+
+growth_home = st.sidebar.number_input("Home Value Growth (%)", value=4.0, step=0.25) / 100.0
+growth_money_market = st.sidebar.number_input("Money Market Growth (%)", value=4.5, step=0.25) / 100.0
+growth_ira = st.sidebar.number_input("IRA Growth (%)", value=7.0, step=0.25) / 100.0
+growth_stocks = st.sidebar.number_input("Stocks / Taxable Growth (%)", value=7.0, step=0.25) / 100.0
+growth_home_account = st.sidebar.number_input("Stocks after home sale (Home Account) Growth (%)", value=7.0, step=0.25) / 100.0
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Spending / Depletion Order")
+order_options = ["Cash", "Money Market", "Other Taxable", "IRA", "Home Account (after sale only)"]
+withdrawal_order = st.sidebar.multiselect(
+    "Choose depletion order (top = deplete first)",
+    options=order_options,
+    default=["Cash", "Money Market", "Other Taxable", "IRA", "Home Account (after sale only)"]
+)
+# Ensure we always have all accounts in some order
+for opt in order_options:
+    if opt not in withdrawal_order:
+        withdrawal_order.append(opt)
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Chart Controls")
+show_expenses = st.sidebar.checkbox("Show Expenses", True)
+show_cashflow = st.sidebar.checkbox("Show Cash Flow", True)
 show_background = st.sidebar.checkbox("Show Background Image", True)
 image_opacity = st.sidebar.slider("Background Image Strength", 0.30, 1.00, 0.65, 0.05)
 
-# =========================
-# DERIVED INPUTS
-# =========================
-start_age = int(current_age)
+# ============================================================
+# Projection
+# ============================================================
 ages = np.arange(start_age, end_age + 1)
+years = np.arange(0, len(ages))  # 0..N-1
 
-# Annualize income + apply average tax rate to income (simple estimate)
-gross_income_annual_0 = 12.0 * (ssn_m + pension_m + employment_m + other_income_m + rental_net_m)
-net_income_annual_0 = gross_income_annual_0 * (1.0 - avg_tax_rate)
+# Home values over time (if owned)
+if home_status == "Do not own":
+    home_values = np.zeros_like(years, dtype=float)
+else:
+    home_values = home_value_now * (1 + growth_home) ** years
 
-living_annual_0 = 12.0 * living_monthly
+sale_year_index = sell_in_years if sell_home else None
+sale_age = start_age + sell_in_years if sell_home else None
 
-# Care start ages
-indep_age = start_age + int(independent_in_years)
-assist_age = start_age + int(assisted_in_years)
-memory_age = start_age + int(memory_in_years)
+# Mortgage schedule
+mort_bal = float(mortgage_balance)
+mort_annual_pmt = annual_payment(mort_bal, mortgage_rate, int(mortgage_term_years)) if home_status == "Own with mortgage" else 0.0
 
-# Home sale age
-sell_home_flag = (own_home == "Yes" and sell_home == "Yes" and sell_in_years > 0)
-home_sale_age = start_age + int(sell_in_years) if sell_home_flag else None
-
-# =========================
-# SIMULATION
-# =========================
+# Account balances
 cash = float(cash_start)
-money_market = float(money_market_start)
+mm = float(money_market_start)
 ira = float(ira_start)
-home_account = 0.0  # only funded after home sale
-home_value = float(home_value_now) if own_home == "Yes" else 0.0
+taxable = float(other_taxable_start)
+home_account = 0.0  # only gets proceeds after sale
 
-# treat other investments as part of IRA for now (simple) – or keep separate if you want
-ira += float(other_investments)
+# Costs
+living_annual = living_monthly * 12.0
 
-mortgage_balance = float(mortgage_balance_input)
-annual_mortgage_payment = annual_payment_from_loan(mortgage_balance, mortgage_rate, int(mortgage_term_years)) if mortgage_balance > 0 else 0.0
+# We’ll estimate care annual base costs; you can later make these user-editable if you want
+care_cost_base = {
+    "Independent": 50000.0,
+    "Assisted": 60000.0,
+    "Memory": 90000.0
+}
+# Starting care costs (today dollars) – inflated by infl_care each year when active
+care_ind_cost = care_cost_base["Independent"]
+care_assist_cost = care_cost_base["Assisted"]
+care_memory_cost = care_cost_base["Memory"]
 
-order = pick_withdrawal_order(withdrawal_option)
+# Series to store
+net_worth_series = []
+expenses_series = []
+cashflow_series = []
 
-rows = []
-sale_details = None
+cash_series = []
+mm_series = []
+ira_series = []
+taxable_series = []
+home_account_series = []
+home_value_series = []
+mortgage_series = []
 
-# current-year care costs
-ind_cost = float(independent_cost_annual)
-asst_cost = float(assisted_cost_annual)
-mem_cost = float(memory_cost_annual)
+# Track if home sold
+home_sold = False
 
-net_income = float(net_income_annual_0)
-living_cost = float(living_annual_0)
+for i, age in enumerate(ages):
+    # Determine care level
+    level = care_level_for_year(
+        current_age=int(age),
+        start_age=int(start_age),
+        yrs_to_ind=int(yrs_to_ind) if yrs_to_ind is not None else None,
+        yrs_to_assist=int(yrs_to_assist) if yrs_to_assist is not None else None,
+        yrs_to_memory=int(yrs_to_memory) if yrs_to_memory is not None else None,
+    )
 
-for age in ages:
-    # Grow home value until sale
-    if own_home == "Yes" and home_value > 0:
-        home_value *= (1.0 + home_growth)
+    # Annual incomes (net rental already)
+    gross_income_annual = (ssn_m + pension_m + employment_m + other_income_m + rental_income_m) * 12.0
 
-    # Determine care state and annual expense for this year
-    # Rule: once in any care, STOP base living and REPLACE with care cost.
-    care_level = "None"
-    annual_expense = living_cost
+    # Taxes (simple estimate): apply avg tax rate to gross income
+    income_tax = gross_income_annual * avg_tax_rate
+    net_income_annual = gross_income_annual - income_tax
 
-    if age >= memory_age:
-        care_level = "Memory Care"
-        annual_expense = mem_cost
-    elif age >= assist_age:
-        care_level = "Assisted Living"
-        annual_expense = asst_cost
-    elif age >= indep_age:
-        care_level = "Independent Living"
-        annual_expense = ind_cost
-
-    # Add mortgage payment to annual expense while mortgage exists
-    if mortgage_balance > 0:
-        annual_expense += annual_mortgage_payment
-
-    # Home sale event (at start of year after appreciation) — proceeds go into Home Account
-    if sell_home_flag and home_sale_age is not None and age == home_sale_age and home_value > 0:
-        section121_ok = (section121_qualified == "Yes")
-        sale_details = compute_home_sale_net_proceeds(
-            sale_price=home_value,
-            sale_cost_pct=sale_cost_pct,
-            original_cost_basis=float(original_cost_basis),
-            improvements=float(improvements),
-            section121_qualified=section121_ok,
-            section121_deduction=float(section121_deduction),
-            cap_gains_rate=float(cap_gains_rate),
-            mortgage_balance=float(mortgage_balance)
-        )
-        # Pay off mortgage from proceeds (already accounted in net proceeds)
-        mortgage_balance = 0.0
-        annual_mortgage_payment = 0.0
-
-        # Fund the home account and remove home value
-        home_account += sale_details["net_proceeds"]
-        home_value = 0.0
-
-    # Grow investment buckets (start-of-year growth)
-    # Cash: no growth
-    money_market *= (1.0 + money_market_growth)
-    ira *= (1.0 + ira_growth)
-    if home_account > 0:
-        home_account *= (1.0 + stocks_after_home_sale)
-
-    # Net cash flow from income vs expenses
-    # (income is simplified; you can later add inflation to income if desired)
-    net_cash_flow = net_income - annual_expense
-
-    # If surplus: add to cash
-    if net_cash_flow >= 0:
-        cash += net_cash_flow
+    # Expenses:
+    # If in any care, STOP adding base living expenses and use care cost instead.
+    if level == "None":
+        total_expenses = living_annual
+    elif level == "Independent":
+        total_expenses = care_ind_cost
+    elif level == "Assisted":
+        total_expenses = care_assist_cost
     else:
-        deficit = -net_cash_flow
+        total_expenses = care_memory_cost
 
-        # Withdraw in order; HOME ACCOUNT not allowed until after sale (i.e., while home_value > 0 or home_account == 0)
-        # We interpret “Home account refers to proceeds only after sale” → available only if home_account > 0.
-        buckets = {
-            "cash": cash,
-            "money_market": money_market,
-            "ira": ira,
-            "home_account": home_account
-        }
+    # Mortgage payment (only while mortgage exists and before sale)
+    mortgage_pmt = 0.0
+    if home_status == "Own with mortgage" and mort_bal > 0 and (not home_sold):
+        mortgage_pmt = mort_annual_pmt
+        total_expenses += mortgage_pmt
 
-        for b in order:
-            if deficit <= 0:
+    # Investment growth (end of year)
+    # We use "growth" as simple annual compounding on balances
+    cash_growth = 0.0  # cash does not earn by default (you could tie to MM if desired)
+    mm_growth_amt = mm * growth_money_market
+    ira_growth_amt = ira * growth_ira
+    taxable_growth_amt = taxable * growth_stocks
+    home_account_growth_amt = home_account * growth_home_account
+
+    # Cash flow BEFORE withdrawals: net income + investment growth (we treat growth as a source) - expenses
+    # This is an accounting choice aligned to your earlier model style.
+    cash_flow = net_income_annual + mm_growth_amt + ira_growth_amt + taxable_growth_amt + home_account_growth_amt - total_expenses
+
+    # Add growth to balances (so it is reflected in assets)
+    mm += mm_growth_amt
+    ira += ira_growth_amt
+    taxable += taxable_growth_amt
+    home_account += home_account_growth_amt
+    cash += cash_growth
+
+    # If cash_flow is positive, it accumulates to CASH (simple assumption)
+    # If negative, we withdraw according to the selected order.
+    if cash_flow >= 0:
+        cash += cash_flow
+    else:
+        shortfall = -cash_flow
+
+        # Withdraw in chosen order
+        for bucket in withdrawal_order:
+            if shortfall <= 0:
                 break
 
-            if b == "home_account" and home_account <= 0:
-                continue  # not available pre-sale
+            if bucket == "Cash":
+                take = min(cash, shortfall)
+                cash -= take
+                shortfall -= take
 
-            available = buckets[b]
-            if available <= 0:
-                continue
+            elif bucket == "Money Market":
+                take = min(mm, shortfall)
+                mm -= take
+                shortfall -= take
 
-            take = min(available, deficit)
-            buckets[b] -= take
-            deficit -= take
+            elif bucket == "Other Taxable":
+                take = min(taxable, shortfall)
+                taxable -= take
+                shortfall -= take
 
-        # Update balances
-        cash = buckets["cash"]
-        money_market = buckets["money_market"]
-        ira = buckets["ira"]
-        home_account = buckets["home_account"]
+            elif bucket == "IRA":
+                take = min(ira, shortfall)
+                ira -= take
+                shortfall -= take
 
-        # If still deficit after draining everything, allow cash to go to 0 and stop (you can also track a "shortfall")
-        # We'll keep it at zero and record a shortfall.
-        shortfall = max(deficit, 0.0)
+            elif bucket == "Home Account (after sale only)":
+                # Not allowed until home is sold / proceeds exist
+                if home_account > 0:
+                    take = min(home_account, shortfall)
+                    home_account -= take
+                    shortfall -= take
 
+        # If still shortfall, cash goes to 0 and accounts are exhausted (no negative balances)
+        # We’ll just keep everything floored at 0.
         if shortfall > 0:
-            # clamp to zero, nothing else to do
+            # In a more advanced model, you'd flag insolvency here
             pass
 
-    # Amortize mortgage yearly (after paying, balance reduces)
-    if mortgage_balance > 0 and annual_mortgage_payment > 0:
-        mortgage_balance = apply_annual_amortization(mortgage_balance, mortgage_rate, annual_mortgage_payment)
+    # Amortize mortgage for one year (after payment)
+    if home_status == "Own with mortgage" and mort_bal > 0 and (not home_sold):
+        mort_bal, _, _ = amortize_one_year(mort_bal, mortgage_rate, mort_annual_pmt)
 
-    total_assets = cash + money_market + ira + home_account + home_value
-    net_worth = total_assets - mortgage_balance  # mortgage treated as liability
+    # Home sale event
+    if sell_home and (i == sale_year_index) and (home_status != "Do not own") and (not home_sold):
+        sale_price = home_values[i]  # value at sale year
+        selling_costs = sale_price * sale_cost_pct
 
-    rows.append({
-        "Age": age,
-        "Net Worth": net_worth,
-        "Cash": cash,
-        "Money Market": money_market,
-        "IRA": ira,
-        "Home Account": home_account,
-        "Home Value": home_value,
-        "Mortgage Balance": mortgage_balance,
-        "Annual Expense": annual_expense,
-        "Net Income (after tax)": net_income,
-        "Care Level": care_level
-    })
+        adjusted_basis = original_cost_basis + improvements
+        gain_before_exclusion = sale_price - selling_costs - adjusted_basis
 
-    # Inflate living and care costs over time
-    living_cost *= (1.0 + living_infl)
-    ind_cost *= (1.0 + care_infl)
-    asst_cost *= (1.0 + care_infl)
-    mem_cost *= (1.0 + care_infl)
+        exclusion = exclusion_121 if qualified_121 else 0.0
+        taxable_gain = max(gain_before_exclusion - exclusion, 0.0)
+        cap_gains_tax = taxable_gain * cap_gains_rate
 
-# Results
-df = pd.DataFrame(rows)
+        # Pay off remaining mortgage at sale if applicable
+        mortgage_payoff = mort_bal if home_status == "Own with mortgage" else 0.0
+        mort_bal = 0.0
 
-# =========================
-# PAGE HEADER + METRICS
-# =========================
-st.markdown(
-    """
-    <h1 style="text-align:center;">Retirement Financial Overview</h1>
-    <p style="text-align:center; font-size:20px; color:#555;">
-    Net worth, expenses, income, and account balances over time
-    </p>
-    """,
-    unsafe_allow_html=True
-)
+        net_proceeds = sale_price - selling_costs - mortgage_payoff - cap_gains_tax
+        net_proceeds = max(net_proceeds, 0.0)
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Starting Net Worth", money(df.iloc[0]["Net Worth"]))
-c2.metric("Peak Net Worth", money(df["Net Worth"].max()))
-c3.metric("Ending Net Worth", money(df.iloc[-1]["Net Worth"]))
+        # Proceeds go to Home Account (brokerage)
+        home_account += net_proceeds
 
-# Optional: show sale details
-if sale_details is not None:
-    with st.expander("Home Sale Details"):
-        st.write({
-            "Sale Price": money(sale_details["sale_price"]),
-            "Sale Cost": money(sale_details["sale_cost"]),
-            "Taxable Gain": money(sale_details["taxable_gain"]),
-            "Capital Gains Tax": money(sale_details["tax"]),
-            "Mortgage Payoff": money(sale_details["mortgage_payoff"]),
-            "Net Proceeds (to Home Account)": money(sale_details["net_proceeds"])
-        })
+        # Home value becomes 0 after sale going forward
+        home_sold = True
 
-# =========================
-# CHART 1: NET WORTH + (OPTIONAL) EXPENSE/INCOME
-# =========================
-left_values = list(df["Annual Expense"].values) + list(df["Net Income (after tax)"].values)
-left_min, left_max = min(left_values) * 0.9, max(left_values) * 1.1
-right_min, right_max = df["Net Worth"].min() * 0.9, df["Net Worth"].max() * 1.1
+    # Home value for this year
+    hv = 0.0
+    if home_status != "Do not own":
+        hv = 0.0 if home_sold else home_values[i]
 
-fig1 = go.Figure()
+    # Net Worth = all assets - liabilities
+    # Assets: cash + money market + IRA + taxable + home account + home value
+    # Liabilities: remaining mortgage balance (if not sold) + debt input
+    liabilities = debt + mort_bal
+    total_assets = cash + mm + ira + taxable + home_account + hv
+    net_worth = total_assets - liabilities
 
-# Net worth line
-fig1.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Net Worth"],
-    name="Net Worth",
-    line=dict(color="#162f3a", width=6, shape="spline"),
-    yaxis="y2"
-))
+    # Store series
+    net_worth_series.append(net_worth)
+    expenses_series.append(total_expenses)
+    cashflow_series.append(cash_flow)
 
-# Milestones: start, peak, mid, decline
+    cash_series.append(cash)
+    mm_series.append(mm)
+    ira_series.append(ira)
+    taxable_series.append(taxable)
+    home_account_series.append(home_account)
+    home_value_series.append(hv)
+    mortgage_series.append(mort_bal)
+
+    # Inflate living/care costs for next year
+    living_annual *= (1 + infl_living)
+    care_ind_cost *= (1 + infl_care)
+    care_assist_cost *= (1 + infl_care)
+    care_memory_cost *= (1 + infl_care)
+
+df = pd.DataFrame({
+    "Age": ages,
+    "Net Worth": net_worth_series,
+    "Expenses": expenses_series,
+    "Cash Flow": cashflow_series,
+    "Cash": cash_series,
+    "Money Market": mm_series,
+    "IRA": ira_series,
+    "Other Taxable": taxable_series,
+    "Home Account": home_account_series,
+    "Home Value": home_value_series,
+    "Mortgage Balance": mortgage_series
+})
+
+# ============================================================
+# Milestones (Net Worth)
+# ============================================================
 start_idx = 0
 peak_idx = int(df["Net Worth"].idxmax())
 mid_idx = int((start_idx + peak_idx) / 2)
 
 decline_candidates = df.loc[peak_idx:]
-decline_hits = decline_candidates[decline_candidates["Net Worth"] < 0.9 * df.loc[peak_idx, "Net Worth"]].index
-decline_idx = int(decline_hits[0]) if len(decline_hits) > 0 else int(df.index[-1])
+decline_idx_candidates = decline_candidates[
+    decline_candidates["Net Worth"] < 0.9 * df.loc[peak_idx, "Net Worth"]
+].index
+decline_idx = int(decline_idx_candidates[0]) if len(decline_idx_candidates) > 0 else int(df.index[-1])
 
 milestones = [
     ("Start", start_idx, "#2c3e50"),
@@ -462,8 +418,52 @@ milestones = [
     ("Reassessment Phase", decline_idx, "#e67e22"),
 ]
 
+# ============================================================
+# Header
+# ============================================================
+st.markdown(
+    """
+    <h1 style="text-align:center;">Retirement Financial Overview</h1>
+    <p style="text-align:center; font-size:22px; color:#555;">
+    A clear view of net worth, expenses, and cash flow over time
+    </p>
+    """,
+    unsafe_allow_html=True
+)
+
+# Metrics
+c1, c2, c3 = st.columns(3)
+c1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
+c2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
+c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
+
+# ============================================================
+# Chart 1: Net Worth + optional Expenses/Cash Flow
+# ============================================================
+left_values = []
+if show_expenses:
+    left_values.extend(df["Expenses"].values.tolist())
+if show_cashflow:
+    left_values.extend(df["Cash Flow"].values.tolist())
+
+left_min, left_max = (-1, 1) if not left_values else (min(left_values) * 0.9, max(left_values) * 1.1)
+right_min = df["Net Worth"].min() * 0.9
+right_max = df["Net Worth"].max() * 1.1
+
+fig = go.Figure()
+
+# Net Worth (right axis)
+fig.add_trace(go.Scatter(
+    x=df["Age"],
+    y=df["Net Worth"],
+    name="Net Worth",
+    line=dict(color="#162f3a", width=6, shape="spline"),
+    yaxis="y2"
+))
+
+# Milestone dots
 for label, idx, color in milestones:
-    fig1.add_trace(go.Scatter(
+    fig.add_trace(go.Scatter(
         x=[df.loc[idx, "Age"]],
         y=[df.loc[idx, "Net Worth"]],
         mode="markers+text",
@@ -475,39 +475,45 @@ for label, idx, color in milestones:
         showlegend=False
     ))
 
-# Expenses and Income on left axis
-fig1.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Annual Expense"],
-    name="Annual Expense",
-    line=dict(width=2.5, dash="dot"),
-    opacity=0.85,
-    yaxis="y1"
-))
+# Expenses (left)
+if show_expenses:
+    fig.add_trace(go.Scatter(
+        x=df["Age"],
+        y=df["Expenses"],
+        name="Expenses",
+        line=dict(color="#c0392b", width=2.5, dash="dot"),
+        opacity=0.85,
+        yaxis="y1"
+    ))
 
-fig1.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Net Income (after tax)"],
-    name="Net Income (after tax)",
-    line=dict(width=2.5),
-    opacity=0.85,
-    yaxis="y1"
-))
+# Cash Flow (left)
+if show_cashflow:
+    fig.add_trace(go.Scatter(
+        x=df["Age"],
+        y=df["Cash Flow"],
+        name="Cash Flow",
+        line=dict(color="#27ae60", width=2.5),
+        opacity=0.85,
+        yaxis="y1"
+    ))
 
 # Background image
 layout_images = []
 if show_background:
     layout_images.append(dict(
         source=f"data:image/jpeg;base64,{bg_image}",
-        xref="paper", yref="paper",
-        x=0, y=1,
-        sizex=1, sizey=1,
+        xref="paper",
+        yref="paper",
+        x=0,
+        y=1,
+        sizex=1,
+        sizey=1,
         sizing="stretch",
         opacity=image_opacity,
         layer="below"
     ))
 
-fig1.update_layout(
+fig.update_layout(
     images=layout_images,
     height=720,
     legend=dict(orientation="h", y=1.1, font=dict(size=18)),
@@ -521,7 +527,7 @@ fig1.update_layout(
         fixedrange=True
     ),
     yaxis=dict(
-        title=dict(text="Income / Expense ($)", font=dict(size=30)),
+        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=30)),
         tickfont=dict(size=24),
         range=[left_min, left_max],
         tickprefix="$",
@@ -545,15 +551,98 @@ fig1.update_layout(
 )
 
 st.plotly_chart(
-    fig1,
+    fig,
     use_container_width=True,
     config={
         "toImageButtonOptions": {
             "format": "png",
-            "filename": "retirement_overview",
+            "filename": "retirement_journey",
             "scale": 3
         }
     }
 )
 
+st.markdown("<p style='text-align:center; color:#666;'>Illustrative projections only.</p>", unsafe_allow_html=True)
 
+# ============================================================
+# Chart 2: Account Balances (requested)
+# ============================================================
+st.markdown("### Asset Breakdown Over Time")
+
+fig2 = go.Figure()
+
+fig2.add_trace(go.Scatter(
+    x=df["Age"], y=df["Cash"],
+    name="Cash",
+    line=dict(width=3, shape="spline")
+))
+fig2.add_trace(go.Scatter(
+    x=df["Age"], y=df["Money Market"],
+    name="Money Market",
+    line=dict(width=3, shape="spline")
+))
+fig2.add_trace(go.Scatter(
+    x=df["Age"], y=df["IRA"],
+    name="IRA",
+    line=dict(width=3, shape="spline")
+))
+fig2.add_trace(go.Scatter(
+    x=df["Age"], y=df["Home Account"],
+    name="Home Account (after sale)",
+    line=dict(width=3, shape="spline")
+))
+fig2.add_trace(go.Scatter(
+    x=df["Age"], y=df["Home Value"],
+    name="Home Value",
+    line=dict(width=3, shape="spline", dash="dot")
+))
+
+# Make it clean and readable
+y_min2 = 0
+y_max2 = max(
+    df["Cash"].max(),
+    df["Money Market"].max(),
+    df["IRA"].max(),
+    df["Home Account"].max(),
+    df["Home Value"].max()
+) * 1.1
+
+fig2.update_layout(
+    height=620,
+    legend=dict(orientation="h", y=1.1, font=dict(size=16)),
+    xaxis=dict(
+        title=dict(text="Age", font=dict(size=26)),
+        tickfont=dict(size=20),
+        tickmode="linear",
+        dtick=5,
+        showgrid=False,
+        zeroline=False,
+        fixedrange=True
+    ),
+    yaxis=dict(
+        title=dict(text="Value ($)", font=dict(size=26)),
+        tickfont=dict(size=20),
+        range=[y_min2, y_max2],
+        tickprefix="$",
+        showgrid=False,
+        zeroline=False,
+        fixedrange=True
+    ),
+    plot_bgcolor="white",
+    margin=dict(t=40, b=40, l=70, r=40)
+)
+
+st.plotly_chart(
+    fig2,
+    use_container_width=True,
+    config={
+        "toImageButtonOptions": {
+            "format": "png",
+            "filename": "asset_breakdown",
+            "scale": 3
+        }
+    }
+)
+
+with st.expander("Show Projection Table"):
+    st.dataframe(df, use_container_width=True)
