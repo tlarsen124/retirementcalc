@@ -180,10 +180,10 @@ milestones = [
 # =========================
 st.markdown(
     """
-    <h1 style="text-align:center;">Retirement Financial Overview</h1>
-    <p style="text-align:center; font-size:20px; color:#666;">
-    A simplified view of income, expenses, and net worth over time
-    </p>
+    <div style="text-align:center;">
+        <h1>Retirement Financial Overview</h1>
+        <p style="font-size:20px; color:#666;">A simplified view of income, expenses, and net worth over time</p>
+    </div>
     """,
     unsafe_allow_html=True
 )
@@ -394,6 +394,9 @@ fig.update_layout(
         dtick=5,
         showgrid=False,
         zeroline=False,
+        showline=True,
+        linecolor="black",
+        linewidth=2,
         fixedrange=True
     ),
     # yaxis=dict(
@@ -412,6 +415,9 @@ fig.update_layout(
         tickprefix="$",
         showgrid=False,
         zeroline=False,
+        showline=True,
+        linecolor="black",
+        linewidth=2,
         fixedrange=True
     ),
     plot_bgcolor="rgba(255,255,255,0.30)",
