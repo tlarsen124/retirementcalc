@@ -17,6 +17,63 @@ def load_image_base64(path):
 bg_image = load_image_base64("assets/background.jpg")
 
 # =========================
+# MORTGAGE CALCULATION FUNCTIONS
+# =========================
+
+def calculate_monthly_payment(principal, annual_rate, years):
+    """
+    Calculate monthly mortgage payment using standard amortization formula.
+    Formula: P * (r * (1+r)^n) / ((1+r)^n - 1)
+    where P = principal, r = monthly rate, n = number of months
+    """
+    if principal <= 0 or years <= 0:
+        return 0
+    
+    monthly_rate = annual_rate / 12
+    num_months = years * 12
+    
+    if monthly_rate == 0:
+        return principal / num_months
+    
+    payment = principal * (monthly_rate * (1 + monthly_rate) ** num_months) / ((1 + monthly_rate) ** num_months - 1)
+    return payment
+
+
+def calculate_annual_mortgage_amortization(principal, monthly_payment, monthly_rate, months_remaining):
+    """
+    Calculate annual mortgage payment breakdown (interest and principal).
+    Returns (total_interest, total_principal, new_balance)
+    """
+    if principal <= 0 or months_remaining <= 0:
+        return 0, 0, 0
+    
+    total_interest = 0
+    total_principal = 0
+    balance = principal
+    
+    # Calculate for 12 months (one year)
+    for month in range(min(12, months_remaining)):
+        if balance <= 0:
+            break
+        
+        interest_payment = balance * monthly_rate
+        principal_payment = monthly_payment - interest_payment
+        
+        # Adjust if payment exceeds remaining balance
+        if principal_payment > balance:
+            principal_payment = balance
+            monthly_payment_adjusted = principal_payment + interest_payment
+        else:
+            monthly_payment_adjusted = monthly_payment
+        
+        total_interest += interest_payment
+        total_principal += principal_payment
+        balance -= principal_payment
+    
+    return total_interest, total_principal, max(0, balance)
+
+
+# =========================
 # DATA IMPORT FUNCTIONS
 # =========================
 
@@ -87,6 +144,11 @@ def map_parameter_to_variable(param_name):
         ('tax_deductions', ['cost basis + improvements + 121 deduction', 'cost basis', 'improvements', '121 deduction', 'tax deductions']),
         ('sell_home_years', ['sell home in', 'sell home', 'home sale years']),
         ('sale_cost_pct', ['sale cost']),
+        ('mortgage_balance', ['existing mortgage balance', 'mortgage balance']),
+        ('mortgage_term', ['remaining term', 'mortgage term']),
+        ('mortgage_rate', ['existing mortgage rate', 'mortgage rate']),
+        ('mortgage_interest_cap', ['cap on mortgage interest']),
+        ('balloon_payment', ['balloon payment']),
         ('ssn_income', ['ssn', 'social security']),
         ('pension_income', ['pension']),
         ('employment_income', ['employment']),
@@ -136,6 +198,11 @@ def import_data(pasted_text):
             'tax_deductions': 250_000.0,
             'sell_home_years': 5,
             'sale_cost_pct': 6.0,
+            'mortgage_balance': 420_000,
+            'mortgage_term': 11,
+            'mortgage_rate': 2.40,
+            'mortgage_interest_cap': 750_000,
+            'balloon_payment': 0,
             'ssn_income': 15_600,
             'pension_income': 27_600,
             'employment_income': 0,
@@ -183,8 +250,11 @@ def import_data(pasted_text):
                 elif var_name == 'sell_home_years' and not (0 <= value <= 40):
                     errors.append(f"{param_name}: Sell Home In (Years) must be between 0 and 40")
                     continue
+                elif var_name == 'mortgage_term' and not (0 <= value <= 30):
+                    errors.append(f"{param_name}: Mortgage Term (Years) must be between 0 and 30")
+                    continue
                 elif var_name in ['home_growth', 'sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate', 
-                                 'living_infl', 'stock_growth', 'cash_growth']:
+                                 'living_infl', 'stock_growth', 'cash_growth', 'mortgage_rate']:
                     # These are percentages - validate 0-100 range
                     if not (0 <= value <= 100):
                         errors.append(f"{param_name}: Percentage must be between 0 and 100")
@@ -295,6 +365,31 @@ sell_home_years = st.sidebar.number_input(
 sale_cost_pct_slider_value = st.session_state.get('imported_sale_cost_pct', 6.0)
 sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, float(sale_cost_pct_slider_value)) / 100
 
+st.sidebar.subheader("Mortgage")
+mortgage_balance = st.sidebar.number_input(
+    "Existing Mortgage Balance ($)",
+    value=int(st.session_state.get('imported_mortgage_balance', 420_000)),
+    step=10_000
+)
+mortgage_term = st.sidebar.number_input(
+    "Remaining Term (yrs)",
+    min_value=0,
+    max_value=30,
+    value=int(st.session_state.get('imported_mortgage_term', 11))
+)
+mortgage_rate_slider_value = st.session_state.get('imported_mortgage_rate', 2.40)
+mortgage_rate = st.sidebar.slider("Existing Mortgage Rate (%)", 0.0, 10.0, float(mortgage_rate_slider_value)) / 100
+mortgage_interest_cap = st.sidebar.number_input(
+    "Cap on Mortgage Interest ($)",
+    value=int(st.session_state.get('imported_mortgage_interest_cap', 750_000)),
+    step=50_000
+)
+balloon_payment = st.sidebar.number_input(
+    "Balloon Payment ($)",
+    value=int(st.session_state.get('imported_balloon_payment', 0)),
+    step=10_000
+)
+
 st.sidebar.subheader("Income (Annual)")
 ssn_income = st.sidebar.number_input(
     "SSN ($)", 
@@ -391,6 +486,16 @@ ages = np.arange(start_age, end_age + 1)
 cash = cash_start
 ira = ira_start
 home_value = home_value_now
+mortgage_balance_current = mortgage_balance
+mortgage_remaining_months = mortgage_term * 12 if mortgage_term > 0 else 0
+
+# Calculate monthly mortgage payment if mortgage exists
+if mortgage_balance_current > 0 and mortgage_term > 0:
+    monthly_mortgage_payment = calculate_monthly_payment(mortgage_balance_current, mortgage_rate, mortgage_term)
+    monthly_mortgage_rate = mortgage_rate / 12
+else:
+    monthly_mortgage_payment = 0
+    monthly_mortgage_rate = 0
 
 net_worth = []
 expenses_series = []
@@ -398,6 +503,7 @@ cashflow_series = []
 cash_series = []
 ira_series = []
 home_series = []
+mortgage_balance_series = []
 
 income_annual = (ssn_income + pension_income + employment_income) * (1 - avg_tax_rate)
 
@@ -417,6 +523,34 @@ for i, age in enumerate(ages):
 
     expenses *= (1 + living_infl) ** i
 
+    # Mortgage payments and tax shield
+    mortgage_payment_annual = 0
+    mortgage_interest_annual = 0
+    mortgage_tax_shield = 0
+    
+    if mortgage_balance_current > 0 and i < sell_home_years:
+        # Calculate annual mortgage payment and interest
+        if mortgage_remaining_months > 0:
+            annual_interest, annual_principal, new_balance = calculate_annual_mortgage_amortization(
+                mortgage_balance_current, monthly_mortgage_payment, monthly_mortgage_rate, mortgage_remaining_months
+            )
+            mortgage_interest_annual = annual_interest
+            mortgage_payment_annual = annual_interest + annual_principal
+            mortgage_balance_current = new_balance
+            mortgage_remaining_months = max(0, mortgage_remaining_months - 12)
+            
+            # Calculate tax shield (interest payment * (1 - tax_rate))
+            mortgage_tax_shield = mortgage_interest_annual * (1 - avg_tax_rate)
+            
+            # Add mortgage payment to expenses, then subtract tax shield
+            expenses += mortgage_payment_annual
+            expenses -= mortgage_tax_shield
+            
+            # If mortgage is paid off, set to 0
+            if mortgage_remaining_months <= 0 or mortgage_balance_current <= 0:
+                mortgage_balance_current = 0
+                mortgage_remaining_months = 0
+
     # Investment growth
     cash *= (1 + cash_growth)
     ira *= (1 + stock_growth)
@@ -431,6 +565,12 @@ for i, age in enumerate(ages):
 
     # Home sale (actual transaction)
     if i == sell_home_years:
+        # Subtract remaining mortgage principal balance from home proceeds
+        if mortgage_balance_current > 0:
+            liquid_home_value -= mortgage_balance_current
+            mortgage_balance_current = 0
+            mortgage_remaining_months = 0
+        
         ira += liquid_home_value
         home_value = 0
         liquid_home_value = 0
@@ -456,6 +596,7 @@ for i, age in enumerate(ages):
     cash_series.append(cash)
     ira_series.append(ira)
     home_series.append(liquid_home_value)
+    mortgage_balance_series.append(mortgage_balance_current)
 
 df = pd.DataFrame({
     "Age": ages,
