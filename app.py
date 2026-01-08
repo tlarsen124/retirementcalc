@@ -483,7 +483,17 @@ image_opacity = st.sidebar.slider("Background Image Opacity", 0.30, 1.00, 1.00, 
 # =========================
 ages = np.arange(start_age, end_age + 1)
 
-cash = cash_start
+# Initialize accounts
+money_market = cash_start
+money_market_cost_basis = cash_start  # All contributions already taxed
+money_market_tax_deferred = 0  # Accumulated untaxed growth
+money_market_prev_value = cash_start  # Track previous year value for growth calculation
+
+brokerage = 0
+brokerage_cost_basis = 0
+brokerage_tax_deferred = 0
+brokerage_prev_value = 0
+
 ira = ira_start
 home_value = home_value_now
 mortgage_balance_current = mortgage_balance
@@ -500,8 +510,10 @@ else:
 net_worth = []
 expenses_series = []
 cashflow_series = []
-cash_series = []
+money_market_series = []
+brokerage_series = []
 ira_series = []
+ira_liquid_series = []
 home_series = []
 mortgage_balance_series = []
 
@@ -552,7 +564,35 @@ for i, age in enumerate(ages):
                 mortgage_remaining_months = 0
 
     # Investment growth
-    cash *= (1 + cash_growth)
+    # Money Market: Grow, then track tax-deferred amount (untaxed growth)
+    money_market_prev_value = money_market
+    money_market *= (1 + cash_growth)
+    money_market_growth = money_market - money_market_prev_value
+    # Track the untaxed growth amount (this is what will be taxed on withdrawal)
+    # If negative growth (losses), reduce tax-deferred amount proportionally
+    if money_market_growth > 0:
+        money_market_tax_deferred += money_market_growth
+    elif money_market_growth < 0 and money_market > 0:
+        # Losses reduce tax-deferred proportionally
+        loss_ratio = abs(money_market_growth) / money_market_prev_value if money_market_prev_value > 0 else 0
+        money_market_tax_deferred = max(0, money_market_tax_deferred * (1 - loss_ratio))
+    
+    # Brokerage: Grow, then track tax-deferred amount (if exists)
+    if brokerage > 0:
+        brokerage_prev_value = brokerage
+        brokerage *= (1 + stock_growth)
+        brokerage_growth = brokerage - brokerage_prev_value
+        # Track the untaxed growth amount (this is what will be taxed on withdrawal)
+        if brokerage_growth > 0:
+            brokerage_tax_deferred += brokerage_growth
+        elif brokerage_growth < 0 and brokerage > 0:
+            # Losses reduce tax-deferred proportionally
+            loss_ratio = abs(brokerage_growth) / brokerage_prev_value if brokerage_prev_value > 0 else 0
+            brokerage_tax_deferred = max(0, brokerage_tax_deferred * (1 - loss_ratio))
+    else:
+        brokerage_prev_value = 0
+    
+    # IRA: Grow (tax calculation handled in liquid value)
     ira *= (1 + stock_growth)
 
     # Calculate liquid home value (net proceeds after sale costs, taxes, and mortgage payoff)
@@ -576,7 +616,12 @@ for i, age in enumerate(ages):
             mortgage_balance_current = 0
             mortgage_remaining_months = 0
         
-        ira += liquid_home_value
+        # Move home sale proceeds to brokerage account
+        brokerage += liquid_home_value
+        brokerage_cost_basis = liquid_home_value  # Already taxed contribution
+        brokerage_tax_deferred = 0  # Start fresh with new contribution
+        brokerage_prev_value = brokerage  # Initialize for growth tracking
+        
         home_value = 0
         liquid_home_value = 0
 
@@ -584,22 +629,91 @@ for i, age in enumerate(ages):
     cash_flow = income_annual - expenses
 
     if cash_flow >= 0:
-        cash += cash_flow
+        # Surplus goes to money market
+        money_market += cash_flow
+        money_market_cost_basis += cash_flow  # New contributions are already taxed
     else:
         deficit = -cash_flow
-        take_cash = min(cash, deficit)
-        cash -= take_cash
-        deficit -= take_cash
+        
+        # Withdrawal order: Money Market → Brokerage → IRA
+        
+        # 1. Withdraw from Money Market
+        # Need to withdraw enough to cover both deficit and tax on withdrawal
+        # Formula: net_available = withdrawal * (1 - (tax_deferred/account) * tax_rate)
+        # So: withdrawal = net_available / (1 - (tax_deferred/account) * tax_rate)
+        if deficit > 0 and money_market > 0:
+            # Calculate effective tax rate on withdrawals
+            tax_rate_on_withdrawal = (money_market_tax_deferred / money_market * cap_gains_rate) if money_market > 0 else 0
+            # Calculate gross withdrawal needed to get net amount (deficit)
+            if tax_rate_on_withdrawal < 1:
+                gross_needed = deficit / (1 - tax_rate_on_withdrawal)
+            else:
+                gross_needed = deficit
+            take_money_market = min(money_market, gross_needed)
+            
+            if take_money_market > 0:
+                withdrawal_pct = take_money_market / money_market
+                untaxed_portion = withdrawal_pct * money_market_tax_deferred
+                tax_owed_mm = untaxed_portion * cap_gains_rate
+                net_available = take_money_market - tax_owed_mm
+                
+                # Reduce account value, cost basis, and tax-deferred pro-rata
+                money_market -= take_money_market
+                money_market_cost_basis *= (1 - withdrawal_pct)
+                money_market_tax_deferred *= (1 - withdrawal_pct)
+                
+                # Update previous value for next year's growth calculation
+                money_market_prev_value = money_market
+                
+                # Reduce deficit by net amount available
+                deficit -= net_available
+        
+        # 2. Withdraw from Brokerage
+        if deficit > 0 and brokerage > 0:
+            # Calculate effective tax rate on withdrawals
+            tax_rate_on_withdrawal = (brokerage_tax_deferred / brokerage * cap_gains_rate) if brokerage > 0 else 0
+            # Calculate gross withdrawal needed to get net amount (deficit)
+            if tax_rate_on_withdrawal < 1:
+                gross_needed = deficit / (1 - tax_rate_on_withdrawal)
+            else:
+                gross_needed = deficit
+            take_brokerage = min(brokerage, gross_needed)
+            
+            if take_brokerage > 0:
+                withdrawal_pct = take_brokerage / brokerage
+                untaxed_portion = withdrawal_pct * brokerage_tax_deferred
+                tax_owed_brokerage = untaxed_portion * cap_gains_rate
+                net_available = take_brokerage - tax_owed_brokerage
+                
+                # Reduce account value, cost basis, and tax-deferred pro-rata
+                brokerage -= take_brokerage
+                brokerage_cost_basis *= (1 - withdrawal_pct)
+                brokerage_tax_deferred *= (1 - withdrawal_pct)
+                
+                # Update previous value for next year's growth calculation
+                brokerage_prev_value = brokerage
+                
+                # Reduce deficit by net amount available
+                deficit -= net_available
+        
+        # 3. Withdraw from IRA (no additional tax, already accounted in liquid value)
         if deficit > 0:
             ira -= deficit
+            ira = max(0, ira)  # Ensure non-negative
 
-    total_assets = cash + ira + liquid_home_value
+    # Calculate liquid values for net worth
+    ira_liquid = ira * (1 - cap_gains_rate)  # IRA is fully untaxed
+    # Money market and brokerage are already after withdrawal taxes, use gross value
+    
+    total_assets = money_market + brokerage + ira_liquid + liquid_home_value
 
     net_worth.append(total_assets)
     expenses_series.append(expenses)
     cashflow_series.append(cash_flow)
-    cash_series.append(cash)
+    money_market_series.append(money_market)
+    brokerage_series.append(brokerage)
     ira_series.append(ira)
+    ira_liquid_series.append(ira_liquid)
     home_series.append(liquid_home_value)
     mortgage_balance_series.append(mortgage_balance_current)
 
@@ -608,8 +722,10 @@ df = pd.DataFrame({
     "Net Worth": net_worth,
     "Expenses": expenses_series,
     "Cash Flow": cashflow_series,
-    "Cash": cash_series,
-    "IRA / Stocks": ira_series,
+    "Money Market": money_market_series,
+    "Brokerage": brokerage_series,
+    "IRA": ira_series,
+    "IRA Liquid": ira_liquid_series,
     "Home Value": home_series
 })
 
@@ -891,8 +1007,9 @@ st.plotly_chart(fig, use_container_width=True)
 # =========================
 fig2 = go.Figure()
 
-fig2.add_trace(go.Scatter(x=df["Age"], y=df["Cash"], name="Cash"))
-fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA / Stocks"], name="IRA / Stocks"))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["Money Market"], name="Money Market"))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["Brokerage"], name="Brokerage"))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA"], name="IRA (Gross)"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", line=dict(dash="dot")))
 
 fig2.update_layout(
@@ -916,8 +1033,10 @@ with st.expander("Show Projection Data"):
         "Net Worth",
         "Expenses",
         "Cash Flow",
-        "Cash",
-        "IRA / Stocks",
+        "Money Market",
+        "Brokerage",
+        "IRA",
+        "IRA Liquid",
         "Home Value"
     ]
 
