@@ -196,11 +196,9 @@ spacer, phase_col1, phase_col2, phase_col3 = st.columns([0.75, 3, 3, 3])
 
 with phase_col1:
     st.markdown(
-        f"""
+        """
         <div style="text-align:center; background-color:#90EE90; padding:15px; border-radius:10px;">
-            <p style="font-size:14px; color:#2c3e50; margin-bottom:5px;">Starting Net Worth</p>
-            <p style="font-size:32px; font-weight:bold; margin-top:0px; color:#2c3e50;">${df.iloc[0]['Net Worth']:,.0f}</p>
-            <h2 style="text-align:center; color:#2c3e50; margin-top:10px;">Phase 1</h2>
+            <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
             <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">💰 Surplus</p>
             <p style="text-align:center; font-size:16px; color:#2c3e50; margin-top:5px;">Income > Costs</p>
         </div>
@@ -210,11 +208,9 @@ with phase_col1:
 
 with phase_col2:
     st.markdown(
-        f"""
+        """
         <div style="text-align:center; background-color:#FFA500; padding:15px; border-radius:10px;">
-            <p style="font-size:14px; color:#2c3e50; margin-bottom:5px;">Peak Net Worth</p>
-            <p style="font-size:32px; font-weight:bold; margin-top:0px; color:#2c3e50;">${df['Net Worth'].max():,.0f}</p>
-            <h2 style="text-align:center; color:#2c3e50; margin-top:10px;">Phase 2</h2>
+            <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
             <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">Living Well On Savings</p>
         </div>
         """,
@@ -223,11 +219,9 @@ with phase_col2:
 
 with phase_col3:
     st.markdown(
-        f"""
+        """
         <div style="text-align:center; background-color:#87CEEB; padding:15px; border-radius:10px;">
-            <p style="font-size:14px; color:#2c3e50; margin-bottom:5px;">Ending Net Worth</p>
-            <p style="font-size:32px; font-weight:bold; margin-top:0px; color:#2c3e50;">${df.iloc[-1]['Net Worth']:,.0f}</p>
-            <h2 style="text-align:center; color:#2c3e50; margin-top:10px;">Phase 3</h2>
+            <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
             <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">Savings Deplete</p>
             <p style="text-align:center; font-size:16px; color:#2c3e50; margin-top:5px;">Additional support may be needed</p>
         </div>
@@ -326,9 +320,71 @@ if show_background:
 # =========================
 # LAYOUT (NO GRIDLINES)
 # =========================
+# Add annotations for metrics at milestone points
+annotations = [
+    # Starting Net Worth at Start milestone
+    dict(
+        x=df.loc[start_idx, "Age"],
+        y=df.loc[start_idx, "Net Worth"],
+        text=f"<b>Starting Net Worth</b><br>${df.iloc[0]['Net Worth']:,.0f}",
+        showarrow=True,
+        arrowhead=2,
+        arrowsize=1.5,
+        arrowwidth=2,
+        arrowcolor="white",
+        ax=0,
+        ay=-40,
+        bgcolor="rgba(255,255,255,0.9)",
+        bordercolor="#2c3e50",
+        borderwidth=2,
+        borderpad=8,
+        font=dict(size=16, color="#2c3e50"),
+        yref="y2"
+    ),
+    # Peak Net Worth at Peak milestone
+    dict(
+        x=df.loc[peak_idx, "Age"],
+        y=df.loc[peak_idx, "Net Worth"],
+        text=f"<b>Peak Net Worth</b><br>${df['Net Worth'].max():,.0f}",
+        showarrow=True,
+        arrowhead=2,
+        arrowsize=1.5,
+        arrowwidth=2,
+        arrowcolor="white",
+        ax=0,
+        ay=-40,
+        bgcolor="rgba(255,255,255,0.9)",
+        bordercolor="#2c3e50",
+        borderwidth=2,
+        borderpad=8,
+        font=dict(size=16, color="#2c3e50"),
+        yref="y2"
+    ),
+    # Ending Net Worth at end of data
+    dict(
+        x=df.loc[df.index[-1], "Age"],
+        y=df.loc[df.index[-1], "Net Worth"],
+        text=f"<b>Ending Net Worth</b><br>${df.iloc[-1]['Net Worth']:,.0f}",
+        showarrow=True,
+        arrowhead=2,
+        arrowsize=1.5,
+        arrowwidth=2,
+        arrowcolor="white",
+        ax=0,
+        ay=-40,
+        bgcolor="rgba(255,255,255,0.9)",
+        bordercolor="#2c3e50",
+        borderwidth=2,
+        borderpad=8,
+        font=dict(size=16, color="#2c3e50"),
+        yref="y2"
+    )
+]
+
 fig.update_layout(
     images=layout_images,
     height=720,
+    annotations=annotations,
     legend=dict(
         orientation="h",
         y=-0.15,
