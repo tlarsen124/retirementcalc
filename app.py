@@ -207,6 +207,8 @@ with phase_col1:
     st.markdown(
         """
         <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
+        <p style="text-align:center; font-size:18px; color:#666; margin-top:10px;">💰 Surplus</p>
+        <p style="text-align:center; font-size:16px; color:#888; margin-top:5px;">Income > Costs</p>
         """,
         unsafe_allow_html=True
     )
@@ -224,6 +226,7 @@ with phase_col2:
     st.markdown(
         """
         <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
+        <p style="text-align:center; font-size:18px; color:#666; margin-top:10px;">Living Well On Savings</p>
         """,
         unsafe_allow_html=True
     )
@@ -241,6 +244,8 @@ with phase_col3:
     st.markdown(
         """
         <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
+        <p style="text-align:center; font-size:18px; color:#666; margin-top:10px;">Savings Deplete</p>
+        <p style="text-align:center; font-size:16px; color:#888; margin-top:5px;">Additional support may be needed</p>
         """,
         unsafe_allow_html=True
     )
