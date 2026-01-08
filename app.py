@@ -194,28 +194,52 @@ st.markdown("<br>", unsafe_allow_html=True)
 phase_col1, phase_col2, phase_col3 = st.columns(3)
 
 # Phase 1 column
-phase_col1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
+phase_col1.markdown(
+    f"""
+    <div style="text-align:right; margin-bottom:10px;">
+        <div style="font-size:14px; color:#666;">Starting Net Worth</div>
+        <div style="font-size:24px; font-weight:bold; color:#2c3e50;">${df.iloc[0]['Net Worth']:,.0f}</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 phase_col1.markdown(
     """
-    <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
+    <h2 style="text-align:right; color:#2c3e50; margin-top:0;">Phase 1</h2>
     """,
     unsafe_allow_html=True
 )
 
 # Phase 2 column
-phase_col2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
+phase_col2.markdown(
+    f"""
+    <div style="text-align:right; margin-bottom:10px;">
+        <div style="font-size:14px; color:#666;">Peak Net Worth</div>
+        <div style="font-size:24px; font-weight:bold; color:#2c3e50;">${df['Net Worth'].max():,.0f}</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 phase_col2.markdown(
     """
-    <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
+    <h2 style="text-align:right; color:#2c3e50; margin-top:0;">Phase 2</h2>
     """,
     unsafe_allow_html=True
 )
 
 # Phase 3 column
-phase_col3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
+phase_col3.markdown(
+    f"""
+    <div style="text-align:right; margin-bottom:10px;">
+        <div style="font-size:14px; color:#666;">Ending Net Worth</div>
+        <div style="font-size:24px; font-weight:bold; color:#2c3e50;">${df.iloc[-1]['Net Worth']:,.0f}</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 phase_col3.markdown(
     """
-    <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
+    <h2 style="text-align:right; color:#2c3e50; margin-top:0;">Phase 3</h2>
     """,
     unsafe_allow_html=True
 )
