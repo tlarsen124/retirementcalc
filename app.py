@@ -197,18 +197,13 @@ phase_col1, phase_col2, phase_col3 = st.columns(3)
 with phase_col1:
     st.markdown(
         f"""
-        <div style="text-align:center;">
-            <p style="font-size:14px; color:#888; margin-bottom:5px;">Starting Net Worth</p>
-            <p style="font-size:32px; font-weight:bold; margin-top:0px;">${df.iloc[0]['Net Worth']:,.0f}</p>
+        <div style="text-align:center; background-color:#90EE90; padding:15px; border-radius:10px;">
+            <p style="font-size:14px; color:#2c3e50; margin-bottom:5px;">Starting Net Worth</p>
+            <p style="font-size:32px; font-weight:bold; margin-top:0px; color:#2c3e50;">${df.iloc[0]['Net Worth']:,.0f}</p>
+            <h2 style="text-align:center; color:#2c3e50; margin-top:10px;">Phase 1</h2>
+            <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">💰 Surplus</p>
+            <p style="text-align:center; font-size:16px; color:#2c3e50; margin-top:5px;">Income > Costs</p>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        """
-        <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
-        <p style="text-align:center; font-size:18px; color:#666; margin-top:10px;">💰 Surplus</p>
-        <p style="text-align:center; font-size:16px; color:#888; margin-top:5px;">Income > Costs</p>
         """,
         unsafe_allow_html=True
     )
@@ -216,17 +211,12 @@ with phase_col1:
 with phase_col2:
     st.markdown(
         f"""
-        <div style="text-align:center;">
-            <p style="font-size:14px; color:#888; margin-bottom:5px;">Peak Net Worth</p>
-            <p style="font-size:32px; font-weight:bold; margin-top:0px;">${df['Net Worth'].max():,.0f}</p>
+        <div style="text-align:center; background-color:#FFA500; padding:15px; border-radius:10px;">
+            <p style="font-size:14px; color:#2c3e50; margin-bottom:5px;">Peak Net Worth</p>
+            <p style="font-size:32px; font-weight:bold; margin-top:0px; color:#2c3e50;">${df['Net Worth'].max():,.0f}</p>
+            <h2 style="text-align:center; color:#2c3e50; margin-top:10px;">Phase 2</h2>
+            <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">Living Well On Savings</p>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        """
-        <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
-        <p style="text-align:center; font-size:18px; color:#666; margin-top:10px;">Living Well On Savings</p>
         """,
         unsafe_allow_html=True
     )
@@ -234,18 +224,13 @@ with phase_col2:
 with phase_col3:
     st.markdown(
         f"""
-        <div style="text-align:center;">
-            <p style="font-size:14px; color:#888; margin-bottom:5px;">Ending Net Worth</p>
-            <p style="font-size:32px; font-weight:bold; margin-top:0px;">${df.iloc[-1]['Net Worth']:,.0f}</p>
+        <div style="text-align:center; background-color:#87CEEB; padding:15px; border-radius:10px;">
+            <p style="font-size:14px; color:#2c3e50; margin-bottom:5px;">Ending Net Worth</p>
+            <p style="font-size:32px; font-weight:bold; margin-top:0px; color:#2c3e50;">${df.iloc[-1]['Net Worth']:,.0f}</p>
+            <h2 style="text-align:center; color:#2c3e50; margin-top:10px;">Phase 3</h2>
+            <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">Savings Deplete</p>
+            <p style="text-align:center; font-size:16px; color:#2c3e50; margin-top:5px;">Additional support may be needed</p>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        """
-        <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
-        <p style="text-align:center; font-size:18px; color:#666; margin-top:10px;">Savings Deplete</p>
-        <p style="text-align:center; font-size:16px; color:#888; margin-top:5px;">Additional support may be needed</p>
         """,
         unsafe_allow_html=True
     )
