@@ -205,7 +205,7 @@ phase_col1.markdown(
 )
 phase_col1.markdown(
     """
-    <h2 style="text-align:right; color:#2c3e50; margin-top:0;">Phase 1</h2>
+    <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
     """,
     unsafe_allow_html=True
 )
@@ -222,7 +222,7 @@ phase_col2.markdown(
 )
 phase_col2.markdown(
     """
-    <h2 style="text-align:right; color:#2c3e50; margin-top:0;">Phase 2</h2>
+    <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
     """,
     unsafe_allow_html=True
 )
@@ -239,7 +239,7 @@ phase_col3.markdown(
 )
 phase_col3.markdown(
     """
-    <h2 style="text-align:right; color:#2c3e50; margin-top:0;">Phase 3</h2>
+    <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
     """,
     unsafe_allow_html=True
 )
