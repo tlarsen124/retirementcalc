@@ -192,7 +192,7 @@ st.markdown(
 # PHASE HEADERS
 # =========================
 st.markdown("<br>", unsafe_allow_html=True)
-spacer, phase_col1, phase_col2, phase_col3 = st.columns([0.85, 3, 3, 3])
+spacer, phase_col1, phase_col2, phase_col3 = st.columns([0.75, 3, 3, 3])
 
 with phase_col1:
     st.markdown(
