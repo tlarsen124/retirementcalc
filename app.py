@@ -267,24 +267,24 @@ for label, idx, color in milestones:
 
 
 # Expenses
-fig.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Expenses"],
-    name="Expenses",
-    line=dict(color="#c0392b", width=2.5, dash="dot"),
-    opacity=0.85,
-    yaxis="y1"
-))
+# fig.add_trace(go.Scatter(
+#     x=df["Age"],
+#     y=df["Expenses"],
+#     name="Expenses",
+#     line=dict(color="#c0392b", width=2.5, dash="dot"),
+#     opacity=0.85,
+#     yaxis="y1"
+# ))
 
 # Cash Flow
-fig.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Cash Flow"],
-    name="Cash Flow",
-    line=dict(color="#27ae60", width=2.5),
-    opacity=0.85,
-    yaxis="y1"
-))
+# fig.add_trace(go.Scatter(
+#     x=df["Age"],
+#     y=df["Cash Flow"],
+#     name="Cash Flow",
+#     line=dict(color="#27ae60", width=2.5),
+#     opacity=0.85,
+#     yaxis="y1"
+# ))
 
 # =========================
 # BACKGROUND IMAGE
@@ -326,14 +326,14 @@ fig.update_layout(
         zeroline=False,
         fixedrange=True
     ),
-    yaxis=dict(
-        title=dict(text="Cash Flow / Expenses ($)", font=dict(size=30)),
-        tickfont=dict(size=24),
-        tickprefix="$",
-        showgrid=False,
-        zeroline=False,
-        fixedrange=True
-    ),
+    # yaxis=dict(
+    #     title=dict(text="Cash Flow / Expenses ($)", font=dict(size=30)),
+    #     tickfont=dict(size=24),
+    #     tickprefix="$",
+    #     showgrid=False,
+    #     zeroline=False,
+    #     fixedrange=True
+    # ),
     yaxis2=dict(
         title=dict(text="Net Worth ($)", font=dict(size=30)),
         tickfont=dict(size=24),
