@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import base64
+import re
 
 st.set_page_config(page_title="Retirement Overview", layout="wide")
 
@@ -16,56 +17,367 @@ def load_image_base64(path):
 bg_image = load_image_base64("assets/background.jpg")
 
 # =========================
+# DATA IMPORT FUNCTIONS
+# =========================
+
+def parse_pasted_data(pasted_text):
+    """
+    Parse pasted tab-separated or space-separated data from Google Sheets.
+    Returns a dictionary mapping parameter names to values.
+    """
+    data_dict = {}
+    lines = pasted_text.strip().split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Try tab separation first (most common from Google Sheets)
+        if '\t' in line:
+            parts = line.split('\t', 1)
+        else:
+            # Try multiple spaces
+            parts = re.split(r'\s{2,}', line, 1)
+            if len(parts) < 2:
+                # Try single space as last resort
+                parts = line.split(' ', 1)
+        
+        if len(parts) >= 2:
+            param_name = parts[0].strip()
+            value_str = parts[1].strip()
+            
+            # Try to convert to number
+            try:
+                # Remove commas and dollar signs
+                value_str_clean = value_str.replace(',', '').replace('$', '').strip()
+                # Try float first, then int
+                try:
+                    value = float(value_str_clean)
+                    # If it's a whole number, convert to int
+                    if value.is_integer():
+                        value = int(value)
+                except ValueError:
+                    value = value_str
+            except:
+                value = value_str
+            
+            data_dict[param_name] = value
+    
+    return data_dict
+
+
+def map_parameter_to_variable(param_name):
+    """
+    Map a parameter name from the Google Sheet to the corresponding variable name.
+    Returns the variable name if found, None otherwise.
+    Uses case-insensitive matching and handles variations.
+    """
+    param_lower = param_name.lower()
+    # Remove common suffixes that might vary
+    param_clean = re.sub(r'\s*\([^)]*\)\s*', '', param_lower)  # Remove parentheses content
+    param_clean = param_clean.replace('$', '').strip()
+    
+    # Mapping dictionary with various possible parameter name variations
+    # Order matters - more specific matches first
+    mappings = [
+        ('start_age', ['age']),
+        ('home_value_now', ['home value today', 'home value']),
+        ('home_growth', ['home value growth', 'home growth']),
+        ('tax_deductions', ['cost basis + improvements + 121 deduction', 'cost basis', 'improvements', '121 deduction', 'tax deductions']),
+        ('sell_home_years', ['sell home in', 'sell home', 'home sale years']),
+        ('sale_cost_pct', ['sale cost']),
+        ('ssn_income', ['ssn', 'social security']),
+        ('pension_income', ['pension']),
+        ('employment_income', ['employment']),
+        ('cash_start', ['cash / money market', 'cash', 'money market']),
+        ('ira_start', ['ira / stocks', 'ira', 'stocks']),
+        ('self_years', ['self-sufficient', 'self sufficient']),
+        ('self_cost', ['self-sufficient annual cost', 'self sufficient annual cost']),
+        ('ind_years', ['independent living starts in', 'independent living']),
+        ('ind_cost', ['independent living annual cost']),
+        ('assist_years', ['assisted living starts in', 'assisted living']),
+        ('assist_cost', ['assisted living annual cost']),
+        ('memory_years', ['memory care starts in', 'memory care']),
+        ('memory_cost', ['memory care annual cost']),
+        ('avg_tax_rate', ['average tax rate']),
+        ('cap_gains_rate', ['capital gains tax', 'capital gains']),
+        ('living_infl', ['living inflation', 'inflation']),
+        ('stock_growth', ['stocks / ira growth', 'stocks growth', 'ira growth', 'stock growth']),
+        ('cash_growth', ['money market growth', 'cash growth']),
+    ]
+    
+    # Check each mapping - try both original and cleaned parameter name
+    for var_name, keywords in mappings:
+        for keyword in keywords:
+            if keyword in param_lower or keyword in param_clean:
+                return var_name
+    
+    return None
+
+
+def import_data(pasted_text):
+    """
+    Import data from pasted text, parse it, map to variables, and store in session state.
+    Returns (success: bool, message: str, imported_count: int)
+    """
+    try:
+        # Parse the pasted data
+        data_dict = parse_pasted_data(pasted_text)
+        
+        if not data_dict:
+            return False, "No data found. Please paste data in 'Parameter Name | Value' format.", 0
+        
+        # Default values for validation
+        defaults = {
+            'start_age': 70,
+            'home_value_now': 1_100_000,
+            'home_growth': 4.0,
+            'tax_deductions': 250_000.0,
+            'sell_home_years': 5,
+            'sale_cost_pct': 6.0,
+            'ssn_income': 15_600,
+            'pension_income': 27_600,
+            'employment_income': 0,
+            'cash_start': 45_000,
+            'ira_start': 1_200_000,
+            'self_years': 2,
+            'self_cost': 38_000,
+            'ind_years': 2,
+            'ind_cost': 50_000,
+            'assist_years': 10,
+            'assist_cost': 60_000,
+            'memory_years': 20,
+            'memory_cost': 90_000,
+            'avg_tax_rate': 30.0,
+            'cap_gains_rate': 25.0,
+            'living_infl': 3.0,
+            'stock_growth': 7.0,
+            'cash_growth': 4.5,
+        }
+        
+        imported_count = 0
+        errors = []
+        
+        # Map and validate each parameter
+        for param_name, value in data_dict.items():
+            var_name = map_parameter_to_variable(param_name)
+            
+            if var_name is None:
+                continue  # Skip unmapped parameters
+            
+            # Validate and convert value
+            try:
+                if isinstance(value, str):
+                    # Try to convert string to number
+                    value_clean = value.replace(',', '').replace('$', '').strip()
+                    if '.' in value_clean:
+                        value = float(value_clean)
+                    else:
+                        value = int(value_clean)
+                
+                # Validate ranges for specific variables
+                if var_name == 'start_age' and not (50 <= value <= 95):
+                    errors.append(f"{param_name}: Age must be between 50 and 95")
+                    continue
+                elif var_name == 'sell_home_years' and not (0 <= value <= 40):
+                    errors.append(f"{param_name}: Sell Home In (Years) must be between 0 and 40")
+                    continue
+                elif var_name in ['home_growth', 'sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate', 
+                                 'living_infl', 'stock_growth', 'cash_growth']:
+                    # These are percentages - validate 0-100 range
+                    if not (0 <= value <= 100):
+                        errors.append(f"{param_name}: Percentage must be between 0 and 100")
+                        continue
+                    # Store as percentage (0-100) for sliders
+                    st.session_state[f'imported_{var_name}'] = value
+                else:
+                    # Store as-is for other values
+                    st.session_state[f'imported_{var_name}'] = value
+                
+                imported_count += 1
+                
+            except (ValueError, TypeError) as e:
+                errors.append(f"{param_name}: Could not convert '{value}' to a number")
+                continue
+        
+        if imported_count == 0:
+            return False, "No valid parameters found. Please check your parameter names.", 0
+        
+        message = f"✓ Successfully imported {imported_count} values. You can now edit them using the inputs below."
+        if errors:
+            message += f" ({len(errors)} errors ignored)"
+        
+        return True, message, imported_count
+        
+    except Exception as e:
+        return False, f"⚠ Error: {str(e)}", 0
+
+
+# =========================
 # SIDEBAR INPUTS
 # =========================
+
+# Import mode toggle
+st.sidebar.markdown("### Data Input Method")
+# Initialize input_mode in session state if not present
+if 'input_mode' not in st.session_state:
+    st.session_state['input_mode'] = 'manual'
+
+input_mode = st.sidebar.radio(
+    "Choose input method:",
+    ["Manual Input", "Import from Data"],
+    index=1 if st.session_state.get('input_mode') == 'import' else 0
+)
+
+st.session_state['input_mode'] = 'import' if input_mode == "Import from Data" else 'manual'
+
+# Show import interface if import mode is selected
+if input_mode == "Import from Data":
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("**Import Data from Google Sheets**")
+    st.sidebar.markdown("*Paste your data here (Parameter Name | Value format)*")
+    
+    pasted_data = st.sidebar.text_area(
+        "Paste your data here:",
+        value="",
+        height=200,
+        placeholder="Age\t70\nHome Value Today ($)\t1100000\nHome Value Growth (%)\t4.0\n..."
+    )
+    
+    if st.sidebar.button("Import Data", type="primary"):
+        if pasted_data.strip():
+            success, message, count = import_data(pasted_data)
+            if success:
+                st.sidebar.success(message)
+                st.rerun()
+            else:
+                st.sidebar.error(message)
+        else:
+            st.sidebar.warning("Please paste data before importing.")
+    
+    st.sidebar.markdown("---")
+    st.sidebar.info("💡 **Tip:** Imported values populate the inputs below. You can edit them at any time.")
+
 st.sidebar.header("Key Assumptions")
 
-start_age = st.sidebar.number_input("Age", min_value=50, max_value=95, value=70)
+# Get default values from session state (imported) or use defaults
+start_age = st.sidebar.number_input(
+    "Age", 
+    min_value=50, 
+    max_value=95, 
+    value=int(st.session_state.get('imported_start_age', 70))
+)
 end_age = 95
 
 st.sidebar.subheader("Home (Owned Outright)")
-home_value_now = st.sidebar.number_input("Home Value Today ($)", value=1_100_000, step=50_000)
-home_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, 4.0) / 100
+home_value_now = st.sidebar.number_input(
+    "Home Value Today ($)", 
+    value=int(st.session_state.get('imported_home_value_now', 1_100_000)), 
+    step=50_000
+)
+# Sliders need percentage values (0-100), but we store as 0-100 in session state for sliders
+home_growth_slider_value = st.session_state.get('imported_home_growth', 4.0)
+home_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home_growth_slider_value)) / 100
 
 tax_deductions = st.sidebar.number_input(
     "Cost Basis + Improvements + 121 Deduction ($)",
-    value=250_000.0,
+    value=float(st.session_state.get('imported_tax_deductions', 250_000.0)),
     step=25_000.0
 )
 
-sell_home_years = st.sidebar.number_input("Sell Home In (Years)", min_value=0, max_value=40, value=5)
-sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, 6.0) / 100
+sell_home_years = st.sidebar.number_input(
+    "Sell Home In (Years)", 
+    min_value=0, 
+    max_value=40, 
+    value=int(st.session_state.get('imported_sell_home_years', 5))
+)
+sale_cost_pct_slider_value = st.session_state.get('imported_sale_cost_pct', 6.0)
+sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, float(sale_cost_pct_slider_value)) / 100
 
 st.sidebar.subheader("Income (Annual)")
-ssn_income = st.sidebar.number_input("SSN ($)", value=15_600, step=500)
-pension_income = st.sidebar.number_input("Pension ($)", value=27_600, step=500)
-employment_income = st.sidebar.number_input("Employment ($)", value=0, step=1_000)
+ssn_income = st.sidebar.number_input(
+    "SSN ($)", 
+    value=int(st.session_state.get('imported_ssn_income', 15_600)), 
+    step=500
+)
+pension_income = st.sidebar.number_input(
+    "Pension ($)", 
+    value=int(st.session_state.get('imported_pension_income', 27_600)), 
+    step=500
+)
+employment_income = st.sidebar.number_input(
+    "Employment ($)", 
+    value=int(st.session_state.get('imported_employment_income', 0)), 
+    step=1_000
+)
 
 st.sidebar.subheader("Investments")
-cash_start = st.sidebar.number_input("Cash / Money Market ($)", value=45_000, step=5_000)
-ira_start = st.sidebar.number_input("IRA / Stocks ($)", value=1_200_000, step=25_000)
+cash_start = st.sidebar.number_input(
+    "Cash / Money Market ($)", 
+    value=int(st.session_state.get('imported_cash_start', 45_000)), 
+    step=5_000
+)
+ira_start = st.sidebar.number_input(
+    "IRA / Stocks ($)", 
+    value=int(st.session_state.get('imported_ira_start', 1_200_000)), 
+    step=25_000
+)
 
 st.sidebar.subheader("Living Expenses")
 
-self_years = st.sidebar.number_input("Self-Sufficient (years)", value=2)
-self_cost = st.sidebar.number_input("Self-Sufficient Annual Cost ($)", value=38_000, step=2_000)
+self_years = st.sidebar.number_input(
+    "Self-Sufficient (years)", 
+    value=int(st.session_state.get('imported_self_years', 2))
+)
+self_cost = st.sidebar.number_input(
+    "Self-Sufficient Annual Cost ($)", 
+    value=int(st.session_state.get('imported_self_cost', 38_000)), 
+    step=2_000
+)
 
-ind_years = st.sidebar.number_input("Independent Living starts in (years)", value=2)
-ind_cost = st.sidebar.number_input("Independent Living Annual Cost ($)", value=50_000, step=2_000)
+ind_years = st.sidebar.number_input(
+    "Independent Living starts in (years)", 
+    value=int(st.session_state.get('imported_ind_years', 2))
+)
+ind_cost = st.sidebar.number_input(
+    "Independent Living Annual Cost ($)", 
+    value=int(st.session_state.get('imported_ind_cost', 50_000)), 
+    step=2_000
+)
 
-assist_years = st.sidebar.number_input("Assisted Living starts in (years)", value=10)
-assist_cost = st.sidebar.number_input("Assisted Living Annual Cost ($)", value=60_000, step=2_000)
+assist_years = st.sidebar.number_input(
+    "Assisted Living starts in (years)", 
+    value=int(st.session_state.get('imported_assist_years', 10))
+)
+assist_cost = st.sidebar.number_input(
+    "Assisted Living Annual Cost ($)", 
+    value=int(st.session_state.get('imported_assist_cost', 60_000)), 
+    step=2_000
+)
 
-memory_years = st.sidebar.number_input("Memory Care starts in (years)", value=20)
-memory_cost = st.sidebar.number_input("Memory Care Annual Cost ($)", value=90_000, step=5_000)
+memory_years = st.sidebar.number_input(
+    "Memory Care starts in (years)", 
+    value=int(st.session_state.get('imported_memory_years', 20))
+)
+memory_cost = st.sidebar.number_input(
+    "Memory Care Annual Cost ($)", 
+    value=int(st.session_state.get('imported_memory_cost', 90_000)), 
+    step=5_000
+)
 
 st.sidebar.subheader("Taxes & Assumptions")
-avg_tax_rate = st.sidebar.slider("Average Tax Rate (%)", 0.0, 40.0, 30.0) / 100
-cap_gains_rate = st.sidebar.slider("Capital Gains Tax (%)", 0.0, 40.0, 25.0) / 100
+avg_tax_rate_slider_value = st.session_state.get('imported_avg_tax_rate', 30.0)
+avg_tax_rate = st.sidebar.slider("Average Tax Rate (%)", 0.0, 40.0, float(avg_tax_rate_slider_value)) / 100
+cap_gains_rate_slider_value = st.session_state.get('imported_cap_gains_rate', 25.0)
+cap_gains_rate = st.sidebar.slider("Capital Gains Tax (%)", 0.0, 40.0, float(cap_gains_rate_slider_value)) / 100
 
-living_infl = st.sidebar.slider("Living Inflation (%)", 0.0, 6.0, 3.0) / 100
-stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, 7.0) / 100
-cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, 4.5) / 100
+living_infl_slider_value = st.session_state.get('imported_living_infl', 3.0)
+living_infl = st.sidebar.slider("Living Inflation (%)", 0.0, 6.0, float(living_infl_slider_value)) / 100
+stock_growth_slider_value = st.session_state.get('imported_stock_growth', 7.0)
+stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, float(stock_growth_slider_value)) / 100
+cash_growth_slider_value = st.session_state.get('imported_cash_growth', 4.5)
+cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, float(cash_growth_slider_value)) / 100
 
 st.sidebar.subheader("Chart Appearance")
 show_background = st.sidebar.checkbox("Show Background Image", True)
