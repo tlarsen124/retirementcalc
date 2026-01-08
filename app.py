@@ -636,9 +636,9 @@ milestones = [
 # =========================
 # HEADER
 # =========================
-header_spacer, header_col1, header_col2, header_col3 = st.columns([0.75, 3, 3, 3])
+header_spacer, header_content = st.columns([0.75, 9.25])
 
-with header_col1:
+with header_content:
     st.markdown(
         """
         <div style="text-align:center;">
@@ -648,11 +648,6 @@ with header_col1:
         """,
         unsafe_allow_html=True
     )
-# Empty columns to maintain spacing alignment
-with header_col2:
-    st.write("")
-with header_col3:
-    st.write("")
 
 # =========================
 # PHASE HEADERS
