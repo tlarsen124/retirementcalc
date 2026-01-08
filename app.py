@@ -69,7 +69,7 @@ cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, 4.5) / 100
 
 st.sidebar.subheader("Chart Appearance")
 show_background = st.sidebar.checkbox("Show Background Image", True)
-image_opacity = st.sidebar.slider("Background Image Opacity", 0.30, 1.00, 0.65, 0.05)
+image_opacity = st.sidebar.slider("Background Image Opacity", 0.30, 1.00, 1.00, 0.05)
 
 # =========================
 # PROJECTION
@@ -192,7 +192,7 @@ st.markdown(
 # PHASE HEADERS
 # =========================
 st.markdown("<br>", unsafe_allow_html=True)
-phase_col1, phase_col2, phase_col3 = st.columns(3)
+spacer, phase_col1, phase_col2, phase_col3 = st.columns([1, 3, 3, 3])
 
 with phase_col1:
     st.markdown(
