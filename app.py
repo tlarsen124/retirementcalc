@@ -555,19 +555,24 @@ for i, age in enumerate(ages):
     cash *= (1 + cash_growth)
     ira *= (1 + stock_growth)
 
-    # Calculate liquid home value (net proceeds after sale costs and taxes)
+    # Calculate liquid home value (net proceeds after sale costs, taxes, and mortgage payoff)
     # This represents what you'd actually get if you sold the home today
     sale_price = home_value
     sale_cost = sale_price * sale_cost_pct
     taxable_gain = max(sale_price - sale_cost - tax_deductions, 0)
     tax = taxable_gain * cap_gains_rate
     liquid_home_value = sale_price - sale_cost - tax
+    
+    # Subtract remaining mortgage principal balance from liquid home value
+    # This represents the net proceeds after paying off the mortgage
+    if mortgage_balance_current > 0:
+        liquid_home_value -= mortgage_balance_current
+        liquid_home_value = max(0, liquid_home_value)  # Ensure non-negative
 
     # Home sale (actual transaction)
     if i == sell_home_years:
-        # Subtract remaining mortgage principal balance from home proceeds
+        # Pay off mortgage when home is sold
         if mortgage_balance_current > 0:
-            liquid_home_value -= mortgage_balance_current
             mortgage_balance_current = 0
             mortgage_remaining_months = 0
         
