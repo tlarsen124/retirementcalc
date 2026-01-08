@@ -346,12 +346,12 @@ fig.update_layout(
     height=720,
     legend=dict(
         orientation="h",
-        y=1.12,
+        y=-0.15,
         font=dict(size=18)
     ),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=30)),
-        tickfont=dict(size=24),
+        title=dict(text="Age", font=dict(size=30, color="black")),
+        tickfont=dict(size=24, color="black"),
         tickmode="linear",
         dtick=5,
         showgrid=False,
@@ -367,8 +367,8 @@ fig.update_layout(
     #     fixedrange=True
     # ),
     yaxis2=dict(
-        title=dict(text="Net Worth ($)", font=dict(size=30)),
-        tickfont=dict(size=24),
+        title=dict(text="Net Worth ($)", font=dict(size=30, color="black")),
+        tickfont=dict(size=24, color="black"),
         overlaying="y",
         side="right",
         tickprefix="$",
@@ -377,7 +377,7 @@ fig.update_layout(
         fixedrange=True
     ),
     plot_bgcolor="rgba(255,255,255,0.30)",
-    margin=dict(t=50, b=50, l=70, r=70)
+    margin=dict(t=50, b=100, l=70, r=70)
 )
 
 st.plotly_chart(fig, use_container_width=True)
