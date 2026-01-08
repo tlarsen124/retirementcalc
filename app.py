@@ -160,7 +160,6 @@ df = pd.DataFrame({
 # =========================
 start_idx = 0
 peak_idx = df["Net Worth"].idxmax()
-mid_idx = int((start_idx + peak_idx) / 2)
 
 decline_candidates = df.loc[peak_idx:]
 decline_idx = decline_candidates[
@@ -170,7 +169,6 @@ decline_idx = decline_idx[0] if len(decline_idx) > 0 else df.index[-1]
 
 milestones = [
     ("Start", start_idx, "#2c3e50"),
-    ("Building Wealth", mid_idx, "#27ae60"),
     ("Peak Net Worth", peak_idx, "#f1c40f"),
     ("Reassessment Phase", decline_idx, "#e67e22"),
 ]
@@ -189,28 +187,32 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
-c2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
-c3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
-
 # =========================
-# PHASE HEADERS
+# METRICS AND PHASE HEADERS (ALIGNED)
 # =========================
 st.markdown("<br>", unsafe_allow_html=True)
 phase_col1, phase_col2, phase_col3 = st.columns(3)
+
+# Phase 1 column
+phase_col1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
 phase_col1.markdown(
     """
     <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
     """,
     unsafe_allow_html=True
 )
+
+# Phase 2 column
+phase_col2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
 phase_col2.markdown(
     """
     <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
     """,
     unsafe_allow_html=True
 )
+
+# Phase 3 column
+phase_col3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
 phase_col3.markdown(
     """
     <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
@@ -260,7 +262,7 @@ for label, idx, color in milestones:
         marker=dict(size=20, color=color, line=dict(color="white", width=3)),
         text=[label],
         textposition="top center",
-        textfont=dict(size=14),
+        textfont=dict(size=28, color="white"),
         yaxis="y2",
         showlegend=False
     ))
