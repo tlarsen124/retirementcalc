@@ -636,15 +636,23 @@ milestones = [
 # =========================
 # HEADER
 # =========================
-st.markdown(
-    """
-    <div style="text-align:center;">
-        <h1>Retirement Financial Overview</h1>
-        <p style="font-size:20px; color:#666;">A simplified view of income, expenses, and net worth over time</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+header_spacer, header_col1, header_col2, header_col3 = st.columns([0.75, 3, 3, 3])
+
+with header_col1:
+    st.markdown(
+        """
+        <div style="text-align:center;">
+            <h1>Retirement Financial Overview</h1>
+            <p style="font-size:20px; color:#666;">A simplified view of income, expenses, and net worth over time</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+# Empty columns to maintain spacing alignment
+with header_col2:
+    st.write("")
+with header_col3:
+    st.write("")
 
 # =========================
 # PHASE HEADERS
