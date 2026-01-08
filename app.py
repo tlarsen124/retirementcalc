@@ -370,7 +370,7 @@ fig.update_layout(
         title=dict(text="Net Worth ($)", font=dict(size=30, color="black")),
         tickfont=dict(size=24, color="black"),
         overlaying="y",
-        side="right",
+        side="left",
         tickprefix="$",
         showgrid=False,
         zeroline=False,
