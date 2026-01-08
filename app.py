@@ -193,27 +193,57 @@ st.markdown(
 # =========================
 st.markdown("<br>", unsafe_allow_html=True)
 phase_col1, phase_col2, phase_col3 = st.columns(3)
-phase_col1.metric("Starting Net Worth", f"${df.iloc[0]['Net Worth']:,.0f}")
-phase_col1.markdown(
-    """
-    <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
-    """,
-    unsafe_allow_html=True
-)
-phase_col2.metric("Peak Net Worth", f"${df['Net Worth'].max():,.0f}")
-phase_col2.markdown(
-    """
-    <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
-    """,
-    unsafe_allow_html=True
-)
-phase_col3.metric("Ending Net Worth", f"${df.iloc[-1]['Net Worth']:,.0f}")
-phase_col3.markdown(
-    """
-    <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
-    """,
-    unsafe_allow_html=True
-)
+
+with phase_col1:
+    st.markdown(
+        f"""
+        <div style="text-align:center;">
+            <p style="font-size:14px; color:#888; margin-bottom:5px;">Starting Net Worth</p>
+            <p style="font-size:32px; font-weight:bold; margin-top:0px;">${df.iloc[0]['Net Worth']:,.0f}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+        <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
+        """,
+        unsafe_allow_html=True
+    )
+
+with phase_col2:
+    st.markdown(
+        f"""
+        <div style="text-align:center;">
+            <p style="font-size:14px; color:#888; margin-bottom:5px;">Peak Net Worth</p>
+            <p style="font-size:32px; font-weight:bold; margin-top:0px;">${df['Net Worth'].max():,.0f}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+        <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
+        """,
+        unsafe_allow_html=True
+    )
+
+with phase_col3:
+    st.markdown(
+        f"""
+        <div style="text-align:center;">
+            <p style="font-size:14px; color:#888; margin-bottom:5px;">Ending Net Worth</p>
+            <p style="font-size:32px; font-weight:bold; margin-top:0px;">${df.iloc[-1]['Net Worth']:,.0f}</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        """
+        <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
+        """,
+        unsafe_allow_html=True
+    )
 st.markdown("<br>", unsafe_allow_html=True)
 
 # =========================
