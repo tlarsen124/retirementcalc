@@ -638,22 +638,44 @@ for i, age in enumerate(ages):
     
     # Investment growth
     # Money Market: Grow, then track tax-deferred amount (untaxed growth)
-    money_market_prev_value = money_market
-    money_market_before_growth = money_market
-    money_market *= (1 + cash_growth)
-    money_market_growth = money_market - money_market_before_growth
-    # Track the untaxed growth amount (this is what will be taxed on withdrawal)
-    # If negative growth (losses), reduce tax-deferred amount proportionally
-    if money_market_growth > 0:
-        money_market_tax_deferred += money_market_growth
-    elif money_market_growth < 0 and money_market > 0:
-        # Losses reduce tax-deferred proportionally
-        loss_ratio = abs(money_market_growth) / money_market_prev_value if money_market_prev_value > 0 else 0
-        money_market_tax_deferred = max(0, money_market_tax_deferred * (1 - loss_ratio))
+    # First, ensure that if account is effectively zero, all tracking variables are zeroed
+    if money_market < 0.01:
+        money_market = 0
+        money_market_cost_basis = 0
+        money_market_tax_deferred = 0
+        money_market_prev_value = 0
+        money_market_growth = 0
+    else:
+        money_market_prev_value = money_market
+        money_market_before_growth = money_market
+        money_market *= (1 + cash_growth)
+        money_market_growth = money_market - money_market_before_growth
+        # Track the untaxed growth amount (this is what will be taxed on withdrawal)
+        # If negative growth (losses), reduce tax-deferred amount proportionally
+        if money_market_growth > 0:
+            money_market_tax_deferred += money_market_growth
+        elif money_market_growth < 0 and money_market > 0:
+            # Losses reduce tax-deferred proportionally
+            loss_ratio = abs(money_market_growth) / money_market_prev_value if money_market_prev_value > 0 else 0
+            money_market_tax_deferred = max(0, money_market_tax_deferred * (1 - loss_ratio))
+        # Ensure money_market didn't become zero due to negative growth (shouldn't happen, but safeguard)
+        if money_market < 0.01:
+            money_market = 0
+            money_market_cost_basis = 0
+            money_market_tax_deferred = 0
+            money_market_prev_value = 0
+            money_market_growth = 0
     
     # Brokerage: Grow, then track tax-deferred amount (if exists)
-    brokerage_before_growth = brokerage
-    if brokerage > 0:
+    # First, ensure that if account is effectively zero, all tracking variables are zeroed
+    if brokerage < 0.01:
+        brokerage = 0
+        brokerage_cost_basis = 0
+        brokerage_tax_deferred = 0
+        brokerage_prev_value = 0
+        brokerage_growth = 0
+    else:
+        brokerage_before_growth = brokerage
         brokerage_prev_value = brokerage
         brokerage *= (1 + stock_growth)
         brokerage_growth = brokerage - brokerage_prev_value
@@ -664,9 +686,13 @@ for i, age in enumerate(ages):
             # Losses reduce tax-deferred proportionally
             loss_ratio = abs(brokerage_growth) / brokerage_prev_value if brokerage_prev_value > 0 else 0
             brokerage_tax_deferred = max(0, brokerage_tax_deferred * (1 - loss_ratio))
-    else:
-        brokerage_growth = 0
-        brokerage_prev_value = 0
+        # Ensure brokerage didn't become zero due to negative growth (shouldn't happen, but safeguard)
+        if brokerage < 0.01:
+            brokerage = 0
+            brokerage_cost_basis = 0
+            brokerage_tax_deferred = 0
+            brokerage_prev_value = 0
+            brokerage_growth = 0
     
     # IRA: Grow (tax calculation handled in liquid value)
     ira_before_growth = ira
@@ -748,13 +774,24 @@ for i, age in enumerate(ages):
                 mm_withdrawal = take_money_market
                 mm_withdrawal_tax = tax_owed_mm
                 
-                # Reduce account value, cost basis, and tax-deferred pro-rata
+                # Reduce account value
                 money_market -= take_money_market
-                money_market_cost_basis *= (1 - withdrawal_pct)
-                money_market_tax_deferred *= (1 - withdrawal_pct)
+                money_market = max(0, money_market)  # Ensure money_market can't go negative
                 
-                # Update previous value for next year's growth calculation
-                money_market_prev_value = money_market
+                # Check if money market account is depleted BEFORE doing pro-rata calculations
+                # This prevents floating-point precision issues
+                if money_market < 0.01:  # Handle floating-point precision - account is effectively depleted
+                    # Explicitly zero everything when depleted
+                    money_market = 0
+                    money_market_cost_basis = 0
+                    money_market_tax_deferred = 0
+                    money_market_prev_value = 0
+                else:
+                    # Only do pro-rata reduction if account is not depleted
+                    money_market_cost_basis *= (1 - withdrawal_pct)
+                    money_market_tax_deferred *= (1 - withdrawal_pct)
+                    # Update previous value for next year's growth calculation
+                    money_market_prev_value = money_market
                 
                 # Reduce deficit by net amount available
                 deficit -= net_available
@@ -780,21 +817,24 @@ for i, age in enumerate(ages):
                 brokerage_withdrawal = take_brokerage
                 brokerage_withdrawal_tax = tax_owed_brokerage
                 
-                # Reduce account value, cost basis, and tax-deferred pro-rata
+                # Reduce account value
                 brokerage -= take_brokerage
                 brokerage = max(0, brokerage)  # Ensure brokerage can't go negative
-                brokerage_cost_basis *= (1 - withdrawal_pct)
-                brokerage_tax_deferred *= (1 - withdrawal_pct)
                 
-                # Update previous value for next year's growth calculation
-                brokerage_prev_value = brokerage
-                
-                # If brokerage account is depleted (zero or effectively zero), reset all tracking variables
-                if brokerage < 0.01:  # Handle floating-point precision
+                # Check if brokerage account is depleted BEFORE doing pro-rata calculations
+                # This prevents floating-point precision issues
+                if brokerage < 0.01:  # Handle floating-point precision - account is effectively depleted
+                    # Explicitly zero everything when depleted
                     brokerage = 0
                     brokerage_cost_basis = 0
                     brokerage_tax_deferred = 0
                     brokerage_prev_value = 0
+                else:
+                    # Only do pro-rata reduction if account is not depleted
+                    brokerage_cost_basis *= (1 - withdrawal_pct)
+                    brokerage_tax_deferred *= (1 - withdrawal_pct)
+                    # Update previous value for next year's growth calculation
+                    brokerage_prev_value = brokerage
                 
                 # Reduce deficit by net amount available
                 deficit -= net_available
