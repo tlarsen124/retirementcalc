@@ -106,8 +106,8 @@ def parse_pasted_data(pasted_text):
             
             # Try to convert to number
             try:
-                # Remove commas and dollar signs
-                value_str_clean = value_str.replace(',', '').replace('$', '').strip()
+                # Remove commas, dollar signs, and percent signs
+                value_str_clean = value_str.replace(',', '').replace('$', '').replace('%', '').strip()
                 # Try float first, then int
                 try:
                     value = float(value_str_clean)
@@ -129,14 +129,15 @@ def map_parameter_to_variable(param_name):
     Map a parameter name from the Google Sheet to the corresponding variable name.
     Returns the variable name if found, None otherwise.
     Uses case-insensitive matching and handles variations.
+    Prioritizes more specific (longer) matches first.
     """
     param_lower = param_name.lower()
     # Remove common suffixes that might vary
     param_clean = re.sub(r'\s*\([^)]*\)\s*', '', param_lower)  # Remove parentheses content
-    param_clean = param_clean.replace('$', '').strip()
+    param_clean = param_clean.replace('$', '').replace('%', '').strip()
     
     # Mapping dictionary with various possible parameter name variations
-    # Order matters - more specific matches first
+    # Keywords within each mapping should be ordered from most specific (longest) to least specific
     mappings = [
         ('start_age', ['age']),
         ('home_value_now', ['home value today', 'home value']),
@@ -154,14 +155,15 @@ def map_parameter_to_variable(param_name):
         ('employment_income', ['employment']),
         ('cash_start', ['cash / money market', 'cash', 'money market']),
         ('ira_start', ['ira / stocks', 'ira', 'stocks']),
-        ('self_years', ['self-sufficient', 'self sufficient']),
+        # IMPORTANT: Cost fields must come before years fields to match correctly
         ('self_cost', ['self-sufficient annual cost', 'self sufficient annual cost']),
-        ('ind_years', ['independent living starts in', 'independent living']),
+        ('self_years', ['self-sufficient', 'self sufficient']),
         ('ind_cost', ['independent living annual cost']),
-        ('assist_years', ['assisted living starts in', 'assisted living']),
+        ('ind_years', ['independent living starts in', 'independent living']),
         ('assist_cost', ['assisted living annual cost']),
-        ('memory_years', ['memory care starts in', 'memory care']),
+        ('assist_years', ['assisted living starts in', 'assisted living']),
         ('memory_cost', ['memory care annual cost']),
+        ('memory_years', ['memory care starts in', 'memory care']),
         ('avg_tax_rate', ['average tax rate']),
         ('cap_gains_rate', ['capital gains tax', 'capital gains']),
         ('living_infl', ['living inflation', 'inflation']),
@@ -169,10 +171,23 @@ def map_parameter_to_variable(param_name):
         ('cash_growth', ['money market growth', 'cash growth']),
     ]
     
-    # Check each mapping - try both original and cleaned parameter name
+    # Sort keywords by length (longest first) to prioritize more specific matches
+    mappings_with_sorted_keywords = []
     for var_name, keywords in mappings:
+        sorted_keywords = sorted(keywords, key=len, reverse=True)
+        mappings_with_sorted_keywords.append((var_name, sorted_keywords))
+    
+    # Check each mapping - try both original and cleaned parameter name
+    # Check longer/more specific keywords first
+    for var_name, keywords in mappings_with_sorted_keywords:
         for keyword in keywords:
-            if keyword in param_lower or keyword in param_clean:
+            # Check if keyword is at the start of the parameter name (more precise match)
+            # or if it's an exact match after cleaning
+            keyword_clean = keyword.replace('$', '').replace('%', '').strip()
+            if (param_lower.startswith(keyword) or 
+                param_clean.startswith(keyword_clean) or
+                keyword in param_lower or 
+                keyword_clean in param_clean):
                 return var_name
     
     return None
