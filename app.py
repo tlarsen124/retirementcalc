@@ -557,6 +557,29 @@ ira_liquid_series = []
 home_series = []
 mortgage_balance_series = []
 
+# Detailed tracking for calculation verification
+mortgage_interest_series = []
+mortgage_principal_series = []
+mortgage_tax_shield_series = []
+money_market_growth_series = []
+money_market_cost_basis_series = []
+money_market_tax_deferred_series = []
+brokerage_growth_series = []
+brokerage_cost_basis_series = []
+brokerage_tax_deferred_series = []
+ira_growth_series = []
+mm_withdrawal_series = []
+mm_withdrawal_tax_series = []
+brokerage_withdrawal_series = []
+brokerage_withdrawal_tax_series = []
+ira_withdrawal_series = []
+home_sale_price_series = []
+home_sale_cost_series = []
+home_sale_tax_series = []
+expense_type_series = []
+income_series = []
+notes_series = []
+
 income_annual = (ssn_income + pension_income + employment_income) * (1 - avg_tax_rate)
 
 for i, age in enumerate(ages):
@@ -603,11 +626,22 @@ for i, age in enumerate(ages):
                 mortgage_balance_current = 0
                 mortgage_remaining_months = 0
 
+    # Determine expense type for notes
+    if age < start_age + self_years:
+        expense_type = "Self-Sufficient"
+    elif age < start_age + assist_years:
+        expense_type = "Independent Living"
+    elif age < start_age + memory_years:
+        expense_type = "Assisted Living"
+    else:
+        expense_type = "Memory Care"
+    
     # Investment growth
     # Money Market: Grow, then track tax-deferred amount (untaxed growth)
     money_market_prev_value = money_market
+    money_market_before_growth = money_market
     money_market *= (1 + cash_growth)
-    money_market_growth = money_market - money_market_prev_value
+    money_market_growth = money_market - money_market_before_growth
     # Track the untaxed growth amount (this is what will be taxed on withdrawal)
     # If negative growth (losses), reduce tax-deferred amount proportionally
     if money_market_growth > 0:
@@ -618,6 +652,7 @@ for i, age in enumerate(ages):
         money_market_tax_deferred = max(0, money_market_tax_deferred * (1 - loss_ratio))
     
     # Brokerage: Grow, then track tax-deferred amount (if exists)
+    brokerage_before_growth = brokerage
     if brokerage > 0:
         brokerage_prev_value = brokerage
         brokerage *= (1 + stock_growth)
@@ -630,18 +665,21 @@ for i, age in enumerate(ages):
             loss_ratio = abs(brokerage_growth) / brokerage_prev_value if brokerage_prev_value > 0 else 0
             brokerage_tax_deferred = max(0, brokerage_tax_deferred * (1 - loss_ratio))
     else:
+        brokerage_growth = 0
         brokerage_prev_value = 0
     
     # IRA: Grow (tax calculation handled in liquid value)
+    ira_before_growth = ira
     ira *= (1 + stock_growth)
+    ira_growth = ira - ira_before_growth
 
     # Calculate liquid home value (net proceeds after sale costs, taxes, and mortgage payoff)
     # This represents what you'd actually get if you sold the home today
     sale_price = home_value
     sale_cost = sale_price * sale_cost_pct
     taxable_gain = max(sale_price - sale_cost - tax_deductions, 0)
-    tax = taxable_gain * cap_gains_rate
-    liquid_home_value = sale_price - sale_cost - tax
+    home_tax = taxable_gain * cap_gains_rate
+    liquid_home_value = sale_price - sale_cost - home_tax
     
     # Subtract remaining mortgage principal balance from liquid home value
     # This represents the net proceeds after paying off the mortgage
@@ -650,7 +688,9 @@ for i, age in enumerate(ages):
         liquid_home_value = max(0, liquid_home_value)  # Ensure non-negative
 
     # Home sale (actual transaction)
+    home_sale_this_year = False
     if i == sell_home_years:
+        home_sale_this_year = True
         # Pay off mortgage when home is sold
         if mortgage_balance_current > 0:
             mortgage_balance_current = 0
@@ -667,6 +707,13 @@ for i, age in enumerate(ages):
 
     # Cash flow
     cash_flow = income_annual - expenses
+    
+    # Initialize withdrawal tracking for this year
+    mm_withdrawal = 0
+    mm_withdrawal_tax = 0
+    brokerage_withdrawal = 0
+    brokerage_withdrawal_tax = 0
+    ira_withdrawal = 0
 
     if cash_flow >= 0:
         # Surplus goes to money market
@@ -697,6 +744,10 @@ for i, age in enumerate(ages):
                 tax_owed_mm = untaxed_portion * cap_gains_rate
                 net_available = take_money_market - tax_owed_mm
                 
+                # Track withdrawals
+                mm_withdrawal = take_money_market
+                mm_withdrawal_tax = tax_owed_mm
+                
                 # Reduce account value, cost basis, and tax-deferred pro-rata
                 money_market -= take_money_market
                 money_market_cost_basis *= (1 - withdrawal_pct)
@@ -725,19 +776,32 @@ for i, age in enumerate(ages):
                 tax_owed_brokerage = untaxed_portion * cap_gains_rate
                 net_available = take_brokerage - tax_owed_brokerage
                 
+                # Track withdrawals
+                brokerage_withdrawal = take_brokerage
+                brokerage_withdrawal_tax = tax_owed_brokerage
+                
                 # Reduce account value, cost basis, and tax-deferred pro-rata
                 brokerage -= take_brokerage
+                brokerage = max(0, brokerage)  # Ensure brokerage can't go negative
                 brokerage_cost_basis *= (1 - withdrawal_pct)
                 brokerage_tax_deferred *= (1 - withdrawal_pct)
                 
                 # Update previous value for next year's growth calculation
                 brokerage_prev_value = brokerage
                 
+                # If brokerage account is depleted (zero or effectively zero), reset all tracking variables
+                if brokerage < 0.01:  # Handle floating-point precision
+                    brokerage = 0
+                    brokerage_cost_basis = 0
+                    brokerage_tax_deferred = 0
+                    brokerage_prev_value = 0
+                
                 # Reduce deficit by net amount available
                 deficit -= net_available
         
         # 3. Withdraw from IRA (no additional tax, already accounted in liquid value)
         if deficit > 0:
+            ira_withdrawal = deficit
             ira -= deficit
             ira = max(0, ira)  # Ensure non-negative
 
@@ -746,6 +810,30 @@ for i, age in enumerate(ages):
     # Money market and brokerage are already after withdrawal taxes, use gross value
     
     total_assets = money_market + brokerage + ira_liquid + liquid_home_value
+    
+    # Build notes explaining calculations
+    notes = []
+    notes.append(f"Expenses: {expense_type} (inflated {living_infl*100:.1f}%)")
+    if mortgage_interest_annual > 0:
+        notes.append(f"Mortgage: ${mortgage_interest_annual:,.0f} interest, ${mortgage_payment_annual - mortgage_interest_annual:,.0f} principal, ${mortgage_tax_shield:,.0f} tax shield")
+    if money_market_growth != 0:
+        notes.append(f"MM growth: ${money_market_growth:,.0f} ({cash_growth*100:.1f}%)")
+    if brokerage_growth != 0:
+        notes.append(f"Brokerage growth: ${brokerage_growth:,.0f} ({stock_growth*100:.1f}%)")
+    if ira_growth != 0:
+        notes.append(f"IRA growth: ${ira_growth:,.0f} ({stock_growth*100:.1f}%)")
+    if home_sale_this_year:
+        notes.append(f"HOME SALE: ${sale_price:,.0f} sale, ${sale_cost:,.0f} costs, ${home_tax:,.0f} tax, ${liquid_home_value:,.0f} net → brokerage")
+    if cash_flow >= 0:
+        notes.append(f"Surplus: ${cash_flow:,.0f} → money market")
+    else:
+        if mm_withdrawal > 0:
+            notes.append(f"MM withdrawal: ${mm_withdrawal:,.0f} gross, ${mm_withdrawal_tax:,.0f} tax, ${mm_withdrawal - mm_withdrawal_tax:,.0f} net")
+        if brokerage_withdrawal > 0:
+            notes.append(f"Brokerage withdrawal: ${brokerage_withdrawal:,.0f} gross, ${brokerage_withdrawal_tax:,.0f} tax, ${brokerage_withdrawal - brokerage_withdrawal_tax:,.0f} net")
+        if ira_withdrawal > 0:
+            notes.append(f"IRA withdrawal: ${ira_withdrawal:,.0f} (tax already in liquid value)")
+    notes_str = " | ".join(notes)
 
     net_worth.append(total_assets)
     expenses_series.append(expenses)
@@ -756,6 +844,30 @@ for i, age in enumerate(ages):
     ira_liquid_series.append(ira_liquid)
     home_series.append(liquid_home_value)
     mortgage_balance_series.append(mortgage_balance_current)
+    
+    # Append detailed tracking
+    mortgage_interest_series.append(mortgage_interest_annual)
+    mortgage_principal_series.append(mortgage_payment_annual - mortgage_interest_annual if mortgage_payment_annual > 0 else 0)
+    mortgage_tax_shield_series.append(mortgage_tax_shield)
+    money_market_growth_series.append(money_market_growth)
+    money_market_cost_basis_series.append(money_market_cost_basis)
+    money_market_tax_deferred_series.append(money_market_tax_deferred)
+    brokerage_growth_series.append(brokerage_growth)
+    brokerage_cost_basis_series.append(brokerage_cost_basis)
+    brokerage_tax_deferred_series.append(brokerage_tax_deferred)
+    ira_growth_series.append(ira_growth)
+    mm_withdrawal_series.append(mm_withdrawal)
+    mm_withdrawal_tax_series.append(mm_withdrawal_tax)
+    brokerage_withdrawal_series.append(brokerage_withdrawal)
+    brokerage_withdrawal_tax_series.append(brokerage_withdrawal_tax)
+    ira_withdrawal_series.append(ira_withdrawal)
+    # Track home sale details (only populated when sale occurs, but calculation happens every year)
+    home_sale_price_series.append(sale_price if home_sale_this_year else 0)
+    home_sale_cost_series.append(sale_cost if home_sale_this_year else 0)
+    home_sale_tax_series.append(home_tax if home_sale_this_year else 0)
+    expense_type_series.append(expense_type)
+    income_series.append(income_annual)
+    notes_series.append(notes_str)
 
 df = pd.DataFrame({
     "Age": ages,
@@ -1088,3 +1200,110 @@ with st.expander("Show Projection Data"):
         use_container_width=True,
         height=400
     )
+
+# =========================
+# DETAILED CALCULATION BREAKDOWN (COLLAPSIBLE)
+# =========================
+with st.expander("Show Detailed Calculation Breakdown"):
+    st.markdown("### Calculation Details by Year")
+    st.markdown("*This table shows all intermediate calculations and formulas used for verification.*")
+    
+    detailed_df = pd.DataFrame({
+        "Age": ages,
+        "Expense Type": expense_type_series,
+        "Income (After Tax)": income_series,
+        "Expenses": expenses_series,
+        "Cash Flow": cashflow_series,
+        "Mortgage Interest": mortgage_interest_series,
+        "Mortgage Principal": mortgage_principal_series,
+        "Mortgage Tax Shield": mortgage_tax_shield_series,
+        "MM Growth": money_market_growth_series,
+        "MM Cost Basis": money_market_cost_basis_series,
+        "MM Tax Deferred": money_market_tax_deferred_series,
+        "MM Withdrawal": mm_withdrawal_series,
+        "MM Withdrawal Tax": mm_withdrawal_tax_series,
+        "Brokerage Growth": brokerage_growth_series,
+        "Brokerage Cost Basis": brokerage_cost_basis_series,
+        "Brokerage Tax Deferred": brokerage_tax_deferred_series,
+        "Brokerage Withdrawal": brokerage_withdrawal_series,
+        "Brokerage Withdrawal Tax": brokerage_withdrawal_tax_series,
+        "IRA Growth": ira_growth_series,
+        "IRA Withdrawal": ira_withdrawal_series,
+        "Home Sale Price": home_sale_price_series,
+        "Home Sale Cost": home_sale_cost_series,
+        "Home Sale Tax": home_sale_tax_series,
+        "Notes": notes_series
+    })
+    
+    # Format currency columns
+    currency_cols_detailed = [
+        "Income (After Tax)",
+        "Expenses",
+        "Cash Flow",
+        "Mortgage Interest",
+        "Mortgage Principal",
+        "Mortgage Tax Shield",
+        "MM Growth",
+        "MM Cost Basis",
+        "MM Tax Deferred",
+        "MM Withdrawal",
+        "MM Withdrawal Tax",
+        "Brokerage Growth",
+        "Brokerage Cost Basis",
+        "Brokerage Tax Deferred",
+        "Brokerage Withdrawal",
+        "Brokerage Withdrawal Tax",
+        "IRA Growth",
+        "IRA Withdrawal",
+        "Home Sale Price",
+        "Home Sale Cost",
+        "Home Sale Tax"
+    ]
+    
+    for col in currency_cols_detailed:
+        detailed_df[col] = detailed_df[col].map(lambda x: f"${x:,.0f}" if x != 0 else "$0")
+    
+    st.dataframe(
+        detailed_df,
+        use_container_width=True,
+        height=600
+    )
+    
+    st.markdown("### Calculation Formulas")
+    st.markdown("""
+    **Net Worth Calculation:**
+    - Net Worth = Money Market + Brokerage + IRA Liquid + Home Value (Liquid)
+    - IRA Liquid = IRA × (1 - Capital Gains Rate)
+    - Home Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
+    
+    **Income:**
+    - Income (After Tax) = (SSN + Pension + Employment) × (1 - Average Tax Rate)
+    
+    **Expenses:**
+    - Expenses = Base Cost × (1 + Living Inflation)^Years
+    - Expenses with Mortgage = Base Expenses + Mortgage Payment - Mortgage Tax Shield
+    - Mortgage Tax Shield = Mortgage Interest × (1 - Average Tax Rate)
+    
+    **Investment Growth:**
+    - Money Market: Value × (1 + Cash Growth Rate)
+    - Brokerage: Value × (1 + Stock Growth Rate)
+    - IRA: Value × (1 + Stock Growth Rate)
+    
+    **Tax-Deferred Tracking:**
+    - Growth amounts are tracked separately as "tax-deferred"
+    - Withdrawals are taxed on the proportion of untaxed growth
+    - Tax on Withdrawal = (Withdrawal × Tax-Deferred/Total Value) × Capital Gains Rate
+    
+    **Withdrawal Order (when cash flow negative):**
+    1. Money Market (with capital gains tax on growth portion)
+    2. Brokerage (with capital gains tax on growth portion)
+    3. IRA (tax already accounted in liquid value calculation)
+    
+    **Home Sale (at specified year):**
+    - Sale Price = Home Value (after growth)
+    - Sale Cost = Sale Price × Sale Cost %
+    - Taxable Gain = max(Sale Price - Sale Cost - Tax Deductions, 0)
+    - Tax = Taxable Gain × Capital Gains Rate
+    - Net Proceeds = Sale Price - Sale Cost - Tax - Mortgage Balance
+    - Proceeds moved to Brokerage account
+    """)
