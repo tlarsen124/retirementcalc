@@ -580,6 +580,13 @@ expense_type_series = []
 income_series = []
 notes_series = []
 
+# Expense calculation tracking
+expense_base_cost_series = []
+expense_inflation_multiplier_series = []
+expense_inflated_base_cost_series = []
+expense_mortgage_payment_series = []
+expense_mortgage_tax_shield_series = []
+
 income_annual = (ssn_income + pension_income + employment_income) * (1 - avg_tax_rate)
 
 for i, age in enumerate(ages):
@@ -587,16 +594,20 @@ for i, age in enumerate(ages):
     home_value *= (1 + home_growth)
 
     # Determine expenses
+    # Store base cost before inflation
     if age < start_age + self_years:
-        expenses = self_cost
+        base_cost = self_cost
     elif age < start_age + assist_years:
-        expenses = ind_cost
+        base_cost = ind_cost
     elif age < start_age + memory_years:
-        expenses = assist_cost
+        base_cost = assist_cost
     else:
-        expenses = memory_cost
+        base_cost = memory_cost
 
-    expenses *= (1 + living_infl) ** i
+    # Calculate inflation multiplier and inflated base cost
+    inflation_multiplier = (1 + living_infl) ** i
+    inflated_base_cost = base_cost * inflation_multiplier
+    expenses = inflated_base_cost
 
     # Mortgage payments and tax shield
     mortgage_payment_annual = 0
@@ -908,6 +919,13 @@ for i, age in enumerate(ages):
     expense_type_series.append(expense_type)
     income_series.append(income_annual)
     notes_series.append(notes_str)
+    
+    # Append expense calculation tracking
+    expense_base_cost_series.append(base_cost)
+    expense_inflation_multiplier_series.append(inflation_multiplier)
+    expense_inflated_base_cost_series.append(inflated_base_cost)
+    expense_mortgage_payment_series.append(mortgage_payment_annual)
+    expense_mortgage_tax_shield_series.append(mortgage_tax_shield)
 
 df = pd.DataFrame({
     "Age": ages,
@@ -1346,4 +1364,71 @@ with st.expander("Show Detailed Calculation Breakdown"):
     - Tax = Taxable Gain × Capital Gains Rate
     - Net Proceeds = Sale Price - Sale Cost - Tax - Mortgage Balance
     - Proceeds moved to Brokerage account
+    """)
+
+# =========================
+# EXPENSE CALCULATIONS (COLLAPSIBLE)
+# =========================
+with st.expander("Show Expense Calculations"):
+    st.markdown("### Expense Calculation Details by Year")
+    st.markdown("*This table shows expense calculations broken down by expense type, inflation adjustments, and mortgage impacts for each year.*")
+    
+    expense_df = pd.DataFrame({
+        "Age": ages,
+        "Expense Type": expense_type_series,
+        "Base Annual Cost": expense_base_cost_series,
+        "Years Since Start": list(range(len(ages))),
+        "Inflation Rate (%)": [living_infl * 100] * len(ages),
+        "Inflation Multiplier": expense_inflation_multiplier_series,
+        "Inflated Base Cost": expense_inflated_base_cost_series,
+        "Mortgage Payment": expense_mortgage_payment_series,
+        "Mortgage Tax Shield": expense_mortgage_tax_shield_series,
+        "Total Expenses": expenses_series
+    })
+    
+    # Format currency columns
+    expense_currency_cols = [
+        "Base Annual Cost",
+        "Inflated Base Cost",
+        "Mortgage Payment",
+        "Mortgage Tax Shield",
+        "Total Expenses"
+    ]
+    
+    for col in expense_currency_cols:
+        expense_df[col] = expense_df[col].map(lambda x: f"${x:,.0f}" if x != 0 else "$0")
+    
+    # Format percentage column
+    expense_df["Inflation Rate (%)"] = expense_df["Inflation Rate (%)"].map(lambda x: f"{x:.2f}%")
+    
+    # Format inflation multiplier to show as multiplier (e.g., 1.0300)
+    expense_df["Inflation Multiplier"] = expense_df["Inflation Multiplier"].map(lambda x: f"{x:.4f}")
+    
+    st.dataframe(
+        expense_df,
+        use_container_width=True,
+        height=600
+    )
+    
+    st.markdown("### Expense Calculation Formulas")
+    st.markdown("""
+    **Base Annual Cost:**
+    - Determined by expense type based on age and phase transitions
+    - Self-Sufficient: Used for years 0 to self_years
+    - Independent Living: Used from self_years to assist_years
+    - Assisted Living: Used from assist_years to memory_years
+    - Memory Care: Used from memory_years onwards
+    
+    **Inflation Adjustment:**
+    - Inflation Multiplier = (1 + Living Inflation Rate)^Years Since Start
+    - Inflated Base Cost = Base Annual Cost × Inflation Multiplier
+    
+    **Mortgage Impact (if applicable):**
+    - Mortgage Payment = Interest Payment + Principal Payment
+    - Mortgage Tax Shield = Mortgage Interest × (1 - Average Tax Rate)
+    - Net Mortgage Cost = Mortgage Payment - Mortgage Tax Shield
+    
+    **Total Expenses:**
+    - Total Expenses = Inflated Base Cost + Mortgage Payment - Mortgage Tax Shield
+    - This represents the net annual expense after accounting for mortgage payments and tax benefits
     """)
