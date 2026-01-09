@@ -129,7 +129,7 @@ def map_parameter_to_variable(param_name):
     Map a parameter name from the Google Sheet to the corresponding variable name.
     Returns the variable name if found, None otherwise.
     Uses case-insensitive matching and handles variations.
-    Prioritizes more specific (longer) matches first.
+    Prioritizes more specific (longer) matches by checking all possible matches first.
     """
     param_lower = param_name.lower()
     # Remove common suffixes that might vary
@@ -137,11 +137,13 @@ def map_parameter_to_variable(param_name):
     param_clean = param_clean.replace('$', '').replace('%', '').strip()
     
     # Mapping dictionary with various possible parameter name variations
+    # IMPORTANT: Growth-related fields must come before their base fields to ensure correct matching
     # Keywords within each mapping should be ordered from most specific (longest) to least specific
     mappings = [
         ('start_age', ['age']),
-        ('home_value_now', ['home value today', 'home value']),
+        # Growth fields must come before base fields
         ('home_growth', ['home value growth', 'home growth']),
+        ('home_value_now', ['home value today', 'home value']),
         ('tax_deductions', ['cost basis + improvements + 121 deduction', 'cost basis', 'improvements', '121 deduction', 'tax deductions']),
         ('sell_home_years', ['sell home in', 'sell home', 'home sale years']),
         ('sale_cost_pct', ['sale cost']),
@@ -154,6 +156,8 @@ def map_parameter_to_variable(param_name):
         ('pension_income', ['pension']),
         ('employment_income', ['employment']),
         ('cash_start', ['cash / money market', 'cash', 'money market']),
+        # Growth fields must come before base fields
+        ('stock_growth', ['stocks / ira growth', 'stocks growth', 'ira growth', 'stock growth']),
         ('ira_start', ['ira / stocks', 'ira', 'stocks']),
         # IMPORTANT: Cost fields must come before years fields to match correctly
         ('self_cost', ['self-sufficient annual cost', 'self sufficient annual cost']),
@@ -167,28 +171,49 @@ def map_parameter_to_variable(param_name):
         ('avg_tax_rate', ['average tax rate']),
         ('cap_gains_rate', ['capital gains tax', 'capital gains']),
         ('living_infl', ['living inflation', 'inflation']),
-        ('stock_growth', ['stocks / ira growth', 'stocks growth', 'ira growth', 'stock growth']),
         ('cash_growth', ['money market growth', 'cash growth']),
     ]
     
-    # Sort keywords by length (longest first) to prioritize more specific matches
-    mappings_with_sorted_keywords = []
-    for var_name, keywords in mappings:
-        sorted_keywords = sorted(keywords, key=len, reverse=True)
-        mappings_with_sorted_keywords.append((var_name, sorted_keywords))
+    # Collect all possible matches with their keyword lengths
+    # This allows us to pick the best (longest keyword) match
+    matches = []
     
-    # Check each mapping - try both original and cleaned parameter name
-    # Check longer/more specific keywords first
-    for var_name, keywords in mappings_with_sorted_keywords:
-        for keyword in keywords:
-            # Check if keyword is at the start of the parameter name (more precise match)
-            # or if it's an exact match after cleaning
-            keyword_clean = keyword.replace('$', '').replace('%', '').strip()
-            if (param_lower.startswith(keyword) or 
-                param_clean.startswith(keyword_clean) or
-                keyword in param_lower or 
-                keyword_clean in param_clean):
-                return var_name
+    for var_name, keywords in mappings:
+        # Sort keywords from longest to shortest for this variable
+        sorted_keywords = sorted(keywords, key=len, reverse=True)
+        
+        for keyword in sorted_keywords:
+            keyword_lower = keyword.lower()
+            keyword_clean = keyword_lower.replace('$', '').replace('%', '').strip()
+            
+            # Check multiple matching strategies:
+            # 1. Exact match at start (most reliable)
+            # 2. Cleaned match at start
+            # 3. Word-boundary match (keyword appears as whole words)
+            
+            # Strategy 1: Direct start match
+            starts_with = (param_lower.startswith(keyword_lower) or 
+                          param_clean.startswith(keyword_clean))
+            
+            if starts_with:
+                matches.append((len(keyword), var_name))
+                break  # Found a match for this variable, move to next
+            
+            # Strategy 2: Word-boundary match (for keywords that don't start the parameter)
+            # Create a regex pattern that matches the keyword as whole words
+            # Replace spaces in keyword with \s+ to allow flexible spacing
+            keyword_regex = re.sub(r'\s+', r'\\s+', re.escape(keyword_clean))
+            # Match at start, or after word boundary (space, slash, or start), and before word boundary or end
+            pattern = r'(^|[\s/])' + keyword_regex + r'([\s%/]|$)'
+            
+            if re.search(pattern, param_clean, re.IGNORECASE):
+                matches.append((len(keyword), var_name))
+                break  # Found a match for this variable, move to next
+    
+    # Return the match with the longest keyword (most specific)
+    if matches:
+        matches.sort(reverse=True)  # Sort by keyword length (longest first)
+        return matches[0][1]  # Return the variable name of the longest match
     
     return None
 
