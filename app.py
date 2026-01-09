@@ -235,7 +235,7 @@ def import_data(pasted_text):
             'start_age': 70,
             'home_value_now': 1_100_000,
             'home_growth': 4.0,
-            'tax_deductions': 250_000.0,
+            'tax_deductions': 300_000.0,
             'sell_home_years': 5,
             'sale_cost_pct': 6.0,
             'mortgage_balance': 420_000,
@@ -246,16 +246,16 @@ def import_data(pasted_text):
             'ssn_income': 15_600,
             'pension_income': 27_600,
             'employment_income': 0,
-            'cash_start': 45_000,
+            'cash_start': 145_000,
             'ira_start': 1_200_000,
             'self_years': 2,
-            'self_cost': 38_000,
+            'self_cost': 37_812,
             'ind_years': 2,
-            'ind_cost': 50_000,
+            'ind_cost': 108_000,
             'assist_years': 10,
-            'assist_cost': 60_000,
+            'assist_cost': 114_000,
             'memory_years': 20,
-            'memory_cost': 90_000,
+            'memory_cost': 120_000,
             'avg_tax_rate': 30.0,
             'cap_gains_rate': 25.0,
             'living_infl': 3.0,
@@ -392,7 +392,7 @@ home_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home_gr
 
 tax_deductions = st.sidebar.number_input(
     "Cost Basis + Improvements + 121 Deduction ($)",
-    value=float(st.session_state.get('imported_tax_deductions', 250_000.0)),
+    value=float(st.session_state.get('imported_tax_deductions', 300_000.0)),
     step=25_000.0
 )
 
@@ -450,7 +450,7 @@ employment_income = st.sidebar.number_input(
 st.sidebar.subheader("Investments")
 cash_start = st.sidebar.number_input(
     "Cash / Money Market ($)", 
-    value=int(st.session_state.get('imported_cash_start', 45_000)), 
+    value=int(st.session_state.get('imported_cash_start', 145_000)), 
     step=5_000
 )
 ira_start = st.sidebar.number_input(
@@ -467,7 +467,7 @@ self_years = st.sidebar.number_input(
 )
 self_cost = st.sidebar.number_input(
     "Self-Sufficient Annual Cost ($)", 
-    value=int(st.session_state.get('imported_self_cost', 38_000)), 
+    value=int(st.session_state.get('imported_self_cost', 37_812)), 
     step=2_000
 )
 
@@ -477,7 +477,7 @@ ind_years = st.sidebar.number_input(
 )
 ind_cost = st.sidebar.number_input(
     "Independent Living Annual Cost ($)", 
-    value=int(st.session_state.get('imported_ind_cost', 50_000)), 
+    value=int(st.session_state.get('imported_ind_cost', 108_000)), 
     step=2_000
 )
 
@@ -487,7 +487,7 @@ assist_years = st.sidebar.number_input(
 )
 assist_cost = st.sidebar.number_input(
     "Assisted Living Annual Cost ($)", 
-    value=int(st.session_state.get('imported_assist_cost', 60_000)), 
+    value=int(st.session_state.get('imported_assist_cost', 114_000)), 
     step=2_000
 )
 
@@ -497,7 +497,7 @@ memory_years = st.sidebar.number_input(
 )
 memory_cost = st.sidebar.number_input(
     "Memory Care Annual Cost ($)", 
-    value=int(st.session_state.get('imported_memory_cost', 90_000)), 
+    value=int(st.session_state.get('imported_memory_cost', 120_000)), 
     step=5_000
 )
 
