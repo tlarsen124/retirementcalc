@@ -171,6 +171,7 @@ def map_parameter_to_variable(param_name):
         ('avg_tax_rate', ['average tax rate']),
         ('cap_gains_rate', ['capital gains tax', 'capital gains']),
         ('living_infl', ['living inflation', 'inflation']),
+        ('care_infl', ['care level inflation', 'care inflation', 'care infl']),
         ('cash_growth', ['money market growth', 'cash growth']),
     ]
     
@@ -259,6 +260,7 @@ def import_data(pasted_text):
             'avg_tax_rate': 30.0,
             'cap_gains_rate': 25.0,
             'living_infl': 3.0,
+            'care_infl': 4.0,
             'stock_growth': 7.0,
             'cash_growth': 4.5,
         }
@@ -294,7 +296,7 @@ def import_data(pasted_text):
                     errors.append(f"{param_name}: Mortgage Term (Years) must be between 0 and 30")
                     continue
                 elif var_name in ['home_growth', 'sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate', 
-                                 'living_infl', 'stock_growth', 'cash_growth', 'mortgage_rate']:
+                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate']:
                     # These are percentages - validate 0-100 range
                     if not (0 <= value <= 100):
                         errors.append(f"{param_name}: Percentage must be between 0 and 100")
@@ -509,6 +511,8 @@ cap_gains_rate = st.sidebar.slider("Capital Gains Tax (%)", 0.0, 40.0, float(cap
 
 living_infl_slider_value = st.session_state.get('imported_living_infl', 3.0)
 living_infl = st.sidebar.slider("Living Inflation (%)", 0.0, 6.0, float(living_infl_slider_value)) / 100
+care_infl_slider_value = st.session_state.get('imported_care_infl', 4.0)
+care_infl = st.sidebar.slider("Care Level Inflation (%)", 0.0, 10.0, float(care_infl_slider_value)) / 100
 stock_growth_slider_value = st.session_state.get('imported_stock_growth', 7.0)
 stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, float(stock_growth_slider_value)) / 100
 cash_growth_slider_value = st.session_state.get('imported_cash_growth', 4.5)
@@ -582,6 +586,7 @@ notes_series = []
 
 # Expense calculation tracking
 expense_base_cost_series = []
+expense_inflation_rate_series = []
 expense_inflation_multiplier_series = []
 expense_inflated_base_cost_series = []
 expense_mortgage_payment_series = []
@@ -597,15 +602,23 @@ for i, age in enumerate(ages):
     # Store base cost before inflation
     if age < start_age + self_years:
         base_cost = self_cost
+        # Use living inflation for self-sufficient mode
+        inflation_rate = living_infl
     elif age < start_age + assist_years:
         base_cost = ind_cost
+        # Use care inflation for care levels (not self-sufficient)
+        inflation_rate = care_infl
     elif age < start_age + memory_years:
         base_cost = assist_cost
+        # Use care inflation for care levels (not self-sufficient)
+        inflation_rate = care_infl
     else:
         base_cost = memory_cost
+        # Use care inflation for care levels (not self-sufficient)
+        inflation_rate = care_infl
 
     # Calculate inflation multiplier and inflated base cost
-    inflation_multiplier = (1 + living_infl) ** i
+    inflation_multiplier = (1 + inflation_rate) ** i
     inflated_base_cost = base_cost * inflation_multiplier
     expenses = inflated_base_cost
 
@@ -864,7 +877,9 @@ for i, age in enumerate(ages):
     
     # Build notes explaining calculations
     notes = []
-    notes.append(f"Expenses: {expense_type} (inflated {living_infl*100:.1f}%)")
+    # Determine which inflation rate was used based on expense type
+    current_infl_rate = living_infl if expense_type == "Self-Sufficient" else care_infl
+    notes.append(f"Expenses: {expense_type} (inflated {current_infl_rate*100:.1f}%)")
     if mortgage_interest_annual > 0:
         notes.append(f"Mortgage: ${mortgage_interest_annual:,.0f} interest, ${mortgage_payment_annual - mortgage_interest_annual:,.0f} principal, ${mortgage_tax_shield:,.0f} tax shield")
     if money_market_growth != 0:
@@ -922,6 +937,7 @@ for i, age in enumerate(ages):
     
     # Append expense calculation tracking
     expense_base_cost_series.append(base_cost)
+    expense_inflation_rate_series.append(inflation_rate * 100)  # Store as percentage
     expense_inflation_multiplier_series.append(inflation_multiplier)
     expense_inflated_base_cost_series.append(inflated_base_cost)
     expense_mortgage_payment_series.append(mortgage_payment_annual)
@@ -1378,7 +1394,7 @@ with st.expander("Show Expense Calculations"):
         "Expense Type": expense_type_series,
         "Base Annual Cost": expense_base_cost_series,
         "Years Since Start": list(range(len(ages))),
-        "Inflation Rate (%)": [living_infl * 100] * len(ages),
+        "Inflation Rate (%)": expense_inflation_rate_series,
         "Inflation Multiplier": expense_inflation_multiplier_series,
         "Inflated Base Cost": expense_inflated_base_cost_series,
         "Mortgage Payment": expense_mortgage_payment_series,

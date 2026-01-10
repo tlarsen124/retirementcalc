@@ -1,0 +1,30 @@
+Age	70
+Home Value Today ($)	1100000
+Home Value Growth (%)	4.0
+Cost Basis + Improvements + 121 Deduction ($)	250000
+Sell Home In (Years)	5
+Sale Cost (%)	6.0
+Existing Mortgage Balance ($)	420000
+Remaining Term (yrs)	11
+Existing Mortgage Rate (%)	2.40
+Cap on Mortgage Interest ($)	750000
+Balloon Payment ($)	0
+SSN ($)	15600
+Pension ($)	27600
+Employment ($)	0
+Cash / Money Market ($)	45000
+IRA / Stocks ($)	1200000
+Self-Sufficient (years)	2
+Self-Sufficient Annual Cost ($)	38000
+Independent Living starts in (years)	2
+Independent Living Annual Cost ($)	50000
+Assisted Living starts in (years)	10
+Assisted Living Annual Cost ($)	60000
+Memory Care starts in (years)	20
+Memory Care Annual Cost ($)	90000
+Average Tax Rate (%)	30.0
+Capital Gains Tax (%)	25.0
+Living Inflation (%)	3.0
+Care Level Inflation (%)	4.0
+Stocks / IRA Growth (%)	7.0
+Money Market Growth (%)	4.5

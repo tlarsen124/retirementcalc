@@ -25,5 +25,6 @@ Memory Care Annual Cost ($)	$120,000
 Average Tax Rate (%)	30.00%
 Capital Gains Tax (%)	25.00%
 Living Inflation (%)	3%
+Care Level Inflation (%)	4.0%
 Stocks / IRA Growth (%)	7.0%
 Money Market Growth (%)	4.5%
