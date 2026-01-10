@@ -577,6 +577,7 @@ mm_withdrawal_tax_series = []
 brokerage_withdrawal_series = []
 brokerage_withdrawal_tax_series = []
 ira_withdrawal_series = []
+ira_withdrawal_tax_series = []
 home_sale_price_series = []
 home_sale_cost_series = []
 home_sale_tax_series = []
@@ -764,6 +765,7 @@ for i, age in enumerate(ages):
     brokerage_withdrawal = 0
     brokerage_withdrawal_tax = 0
     ira_withdrawal = 0
+    ira_withdrawal_tax = 0
 
     if cash_flow >= 0:
         # Surplus goes to money market
@@ -863,14 +865,42 @@ for i, age in enumerate(ages):
                 # Reduce deficit by net amount available
                 deficit -= net_available
         
-        # 3. Withdraw from IRA (no additional tax, already accounted in liquid value)
-        if deficit > 0:
-            ira_withdrawal = deficit
-            ira -= deficit
-            ira = max(0, ira)  # Ensure non-negative
+        # 3. Withdraw from IRA
+        # Need to withdraw enough to cover both deficit and tax on withdrawal
+        # IRA withdrawals are taxed as ordinary income (avg_tax_rate)
+        if deficit > 0 and ira > 0:
+            # Calculate gross withdrawal needed to get net amount (deficit)
+            # Formula: net_available = withdrawal * (1 - avg_tax_rate)
+            # So: withdrawal = net_available / (1 - avg_tax_rate)
+            if avg_tax_rate < 1:
+                gross_needed = deficit / (1 - avg_tax_rate)
+            else:
+                gross_needed = deficit
+            take_ira = min(ira, gross_needed)
+            
+            if take_ira > 0:
+                # Calculate tax owed on full withdrawal (IRAs are fully taxed)
+                tax_owed_ira = take_ira * avg_tax_rate
+                net_available = take_ira - tax_owed_ira
+                
+                # Track withdrawals
+                ira_withdrawal = take_ira
+                ira_withdrawal_tax = tax_owed_ira
+                
+                # Reduce account value
+                ira -= take_ira
+                ira = max(0, ira)  # Ensure IRA can't go negative
+                
+                # Check if IRA account is depleted
+                if ira < 0.01:  # Handle floating-point precision - account is effectively depleted
+                    # Explicitly zero when depleted
+                    ira = 0
+                
+                # Reduce deficit by net amount available
+                deficit -= net_available
 
     # Calculate liquid values for net worth
-    ira_liquid = ira * (1 - cap_gains_rate)  # IRA is fully untaxed
+    ira_liquid = ira * (1 - avg_tax_rate)  # IRA withdrawals taxed as ordinary income
     # Money market and brokerage are already after withdrawal taxes, use gross value
     
     total_assets = money_market + brokerage + ira_liquid + liquid_home_value
@@ -898,7 +928,7 @@ for i, age in enumerate(ages):
         if brokerage_withdrawal > 0:
             notes.append(f"Brokerage withdrawal: ${brokerage_withdrawal:,.0f} gross, ${brokerage_withdrawal_tax:,.0f} tax, ${brokerage_withdrawal - brokerage_withdrawal_tax:,.0f} net")
         if ira_withdrawal > 0:
-            notes.append(f"IRA withdrawal: ${ira_withdrawal:,.0f} (tax already in liquid value)")
+            notes.append(f"IRA withdrawal: ${ira_withdrawal:,.0f} gross, ${ira_withdrawal_tax:,.0f} tax, ${ira_withdrawal - ira_withdrawal_tax:,.0f} net")
     notes_str = " | ".join(notes)
 
     net_worth.append(total_assets)
@@ -927,6 +957,7 @@ for i, age in enumerate(ages):
     brokerage_withdrawal_series.append(brokerage_withdrawal)
     brokerage_withdrawal_tax_series.append(brokerage_withdrawal_tax)
     ira_withdrawal_series.append(ira_withdrawal)
+    ira_withdrawal_tax_series.append(ira_withdrawal_tax)
     # Track home sale details (only populated when sale occurs, but calculation happens every year)
     home_sale_price_series.append(sale_price if home_sale_this_year else 0)
     home_sale_cost_series.append(sale_cost if home_sale_this_year else 0)
@@ -1302,7 +1333,9 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "Brokerage Withdrawal": brokerage_withdrawal_series,
         "Brokerage Withdrawal Tax": brokerage_withdrawal_tax_series,
         "IRA Growth": ira_growth_series,
+        "IRA Tax Deferred": ira_series,
         "IRA Withdrawal": ira_withdrawal_series,
+        "IRA Taxes": ira_withdrawal_tax_series,
         "Home Sale Price": home_sale_price_series,
         "Home Sale Cost": home_sale_cost_series,
         "Home Sale Tax": home_sale_tax_series,
@@ -1328,7 +1361,9 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "Brokerage Withdrawal",
         "Brokerage Withdrawal Tax",
         "IRA Growth",
+        "IRA Tax Deferred",
         "IRA Withdrawal",
+        "IRA Taxes",
         "Home Sale Price",
         "Home Sale Cost",
         "Home Sale Tax"
@@ -1347,7 +1382,7 @@ with st.expander("Show Detailed Calculation Breakdown"):
     st.markdown("""
     **Net Worth Calculation:**
     - Net Worth = Money Market + Brokerage + IRA Liquid + Home Value (Liquid)
-    - IRA Liquid = IRA × (1 - Capital Gains Rate)
+    - IRA Liquid = IRA × (1 - Average Tax Rate)
     - Home Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
     
     **Income:**
@@ -1364,14 +1399,16 @@ with st.expander("Show Detailed Calculation Breakdown"):
     - IRA: Value × (1 + Stock Growth Rate)
     
     **Tax-Deferred Tracking:**
-    - Growth amounts are tracked separately as "tax-deferred"
-    - Withdrawals are taxed on the proportion of untaxed growth
-    - Tax on Withdrawal = (Withdrawal × Tax-Deferred/Total Value) × Capital Gains Rate
+    - Money Market & Brokerage: Growth amounts are tracked separately as "tax-deferred"
+    - Money Market & Brokerage: Withdrawals are taxed on the proportion of untaxed growth
+    - Money Market & Brokerage: Tax on Withdrawal = (Withdrawal × Tax-Deferred/Total Value) × Capital Gains Rate
+    - IRA: Withdrawals are taxed as ordinary income on the full withdrawal amount
+    - IRA: Tax on Withdrawal = Withdrawal × Average Tax Rate
     
     **Withdrawal Order (when cash flow negative):**
-    1. Money Market (with capital gains tax on growth portion)
-    2. Brokerage (with capital gains tax on growth portion)
-    3. IRA (tax already accounted in liquid value calculation)
+    1. Money Market (with capital gains tax on growth portion) - withdraws gross amount to cover deficit + taxes
+    2. Brokerage (with capital gains tax on growth portion) - withdraws gross amount to cover remaining deficit + taxes
+    3. IRA (with ordinary income tax on full withdrawal) - withdraws gross amount to cover remaining deficit + taxes
     
     **Home Sale (at specified year):**
     - Sale Price = Home Value (after growth)
