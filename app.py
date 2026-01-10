@@ -390,7 +390,7 @@ home_value_now = st.sidebar.number_input(
 )
 # Sliders need percentage values (0-100), but we store as 0-100 in session state for sliders
 home_growth_slider_value = st.session_state.get('imported_home_growth', 4.0)
-home_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home_growth_slider_value)) / 100
+home_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home_growth_slider_value), step=0.1) / 100
 
 tax_deductions = st.sidebar.number_input(
     "Cost Basis + Improvements + 121 Deduction ($)",
@@ -505,18 +505,18 @@ memory_cost = st.sidebar.number_input(
 
 st.sidebar.subheader("Taxes & Assumptions")
 avg_tax_rate_slider_value = st.session_state.get('imported_avg_tax_rate', 30.0)
-avg_tax_rate = st.sidebar.slider("Average Tax Rate (%)", 0.0, 40.0, float(avg_tax_rate_slider_value)) / 100
+avg_tax_rate = st.sidebar.slider("Average Tax Rate (%)", 0.0, 40.0, float(avg_tax_rate_slider_value), step=1.0) / 100
 cap_gains_rate_slider_value = st.session_state.get('imported_cap_gains_rate', 25.0)
-cap_gains_rate = st.sidebar.slider("Capital Gains Tax (%)", 0.0, 40.0, float(cap_gains_rate_slider_value)) / 100
+cap_gains_rate = st.sidebar.slider("Capital Gains Tax (%)", 0.0, 40.0, float(cap_gains_rate_slider_value), step=1.0) / 100
 
 living_infl_slider_value = st.session_state.get('imported_living_infl', 3.0)
-living_infl = st.sidebar.slider("Living Inflation (%)", 0.0, 6.0, float(living_infl_slider_value)) / 100
+living_infl = st.sidebar.slider("Living Inflation (%)", 0.0, 6.0, float(living_infl_slider_value), step=0.1) / 100
 care_infl_slider_value = st.session_state.get('imported_care_infl', 4.0)
-care_infl = st.sidebar.slider("Care Level Inflation (%)", 0.0, 10.0, float(care_infl_slider_value)) / 100
+care_infl = st.sidebar.slider("Care Level Inflation (%)", 0.0, 10.0, float(care_infl_slider_value), step=0.1) / 100
 stock_growth_slider_value = st.session_state.get('imported_stock_growth', 7.0)
-stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, float(stock_growth_slider_value)) / 100
+stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, float(stock_growth_slider_value), step=0.1) / 100
 cash_growth_slider_value = st.session_state.get('imported_cash_growth', 4.5)
-cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, float(cash_growth_slider_value)) / 100
+cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, float(cash_growth_slider_value), step=0.1) / 100
 
 st.sidebar.subheader("Chart Appearance")
 show_background = st.sidebar.checkbox("Show Background Image", True)
