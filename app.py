@@ -593,7 +593,7 @@ expense_inflated_base_cost_series = []
 expense_mortgage_payment_series = []
 expense_mortgage_tax_shield_series = []
 
-income_annual = (ssn_income + pension_income + employment_income) * (1 - avg_tax_rate)
+income_annual = ssn_income + (pension_income + employment_income) * (1 - avg_tax_rate)
 
 for i, age in enumerate(ages):
     # Grow home until sale
@@ -1372,11 +1372,27 @@ with st.expander("Show Detailed Calculation Breakdown"):
     for col in currency_cols_detailed:
         detailed_df[col] = detailed_df[col].map(lambda x: f"${x:,.0f}" if x != 0 else "$0")
     
-    st.dataframe(
-        detailed_df,
-        use_container_width=True,
-        height=600
+    # Column selection dropdown
+    all_columns = list(detailed_df.columns)
+    default_columns = ["Age", "Expense Type", "Income (After Tax)", "Expenses", "Cash Flow", "Notes"]
+    
+    selected_columns = st.multiselect(
+        "Select columns to display:",
+        options=all_columns,
+        default=default_columns,
+        key="detailed_columns_selector"
     )
+    
+    # Display selected columns only
+    if selected_columns:
+        display_detailed_df = detailed_df[selected_columns]
+        st.dataframe(
+            display_detailed_df,
+            use_container_width=True,
+            height=600
+        )
+    else:
+        st.info("Please select at least one column to display.")
     
     st.markdown("### Calculation Formulas")
     st.markdown("""
@@ -1386,7 +1402,8 @@ with st.expander("Show Detailed Calculation Breakdown"):
     - Home Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
     
     **Income:**
-    - Income (After Tax) = (SSN + Pension + Employment) × (1 - Average Tax Rate)
+    - Income (After Tax) = SSN + (Pension + Employment) × (1 - Average Tax Rate)
+    - Note: SSN is tax-exempt; only Pension and Employment income are taxed
     
     **Expenses:**
     - Expenses = Base Cost × (1 + Living Inflation)^Years
