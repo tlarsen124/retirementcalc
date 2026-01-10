@@ -522,6 +522,23 @@ st.sidebar.subheader("Chart Appearance")
 show_background = st.sidebar.checkbox("Show Background Image", True)
 image_opacity = st.sidebar.slider("Background Image Opacity", 0.30, 1.00, 1.00, 0.05)
 
+# Background color options
+background_color = st.sidebar.selectbox(
+    "Chart Background Color",
+    ["Light Blue", "Light Gray", "White", "Beige", "Lavender"],
+    index=0
+)
+
+# Map selection to rgba values
+bg_color_map = {
+    "Light Blue": "rgba(240,248,255,0.85)",
+    "Light Gray": "rgba(245,245,245,0.85)",
+    "White": "rgba(255,255,255,0.90)",
+    "Beige": "rgba(250,245,235,0.85)",
+    "Lavender": "rgba(230,230,250,0.85)"
+}
+selected_bg_color = bg_color_map[background_color]
+
 # =========================
 # PROJECTION
 # =========================
@@ -1219,17 +1236,24 @@ fig.update_layout(
     legend=dict(
         orientation="h",
         y=-0.15,
-        font=dict(size=18)
+        font=dict(size=18, color="#2c3e50"),
+        bgcolor="rgba(255,255,255,0.85)",
+        bordercolor="#2c3e50",
+        borderwidth=2
     ),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=30, color="black")),
-        tickfont=dict(size=24, color="black"),
+        title=dict(text="Age", font=dict(size=30, color="#2c3e50")),
+        tickfont=dict(size=24, color="#2c3e50"),
         tickmode="linear",
         dtick=5,
-        showgrid=False,
-        zeroline=False,
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
         showline=True,
-        linecolor="black",
+        linecolor="#2c3e50",
         linewidth=2,
         fixedrange=True
     ),
@@ -1242,20 +1266,36 @@ fig.update_layout(
     #     fixedrange=True
     # ),
     yaxis2=dict(
-        title=dict(text="Net Worth ($)", font=dict(size=30, color="black")),
-        tickfont=dict(size=24, color="black"),
+        title=dict(text="Net Worth ($)", font=dict(size=30, color="#2c3e50")),
+        tickfont=dict(size=24, color="#2c3e50"),
         overlaying="y",
         side="left",
         tickprefix="$",
-        showgrid=False,
-        zeroline=False,
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
         showline=True,
-        linecolor="black",
+        linecolor="#2c3e50",
         linewidth=2,
         fixedrange=True
     ),
-    plot_bgcolor="rgba(255,255,255,0.30)",
-    margin=dict(t=50, b=100, l=70, r=70)
+    # Enhanced background colors with gradient effect
+    plot_bgcolor=selected_bg_color,
+    paper_bgcolor="rgba(255,255,255,0.95)",  # Slightly off-white paper background
+    margin=dict(t=50, b=100, l=70, r=70),
+    # Add a subtle border around the plot
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#2c3e50", width=2),
+            fillcolor="rgba(0,0,0,0)"
+        )
+    ]
 )
 
 st.plotly_chart(fig, use_container_width=True)
@@ -1272,10 +1312,54 @@ fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", li
 fig2.update_layout(
     images=layout_images,
     height=600,
-    xaxis=dict(title="Age", tickfont=dict(size=18)),
-    yaxis=dict(title="Value", tickfont=dict(size=18), tickprefix="$"),
-    legend=dict(orientation="h"),
-    plot_bgcolor="rgba(255,255,255,0.35)"
+    xaxis=dict(
+        title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
+        tickfont=dict(size=18, color="#2c3e50"),
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
+        showline=True,
+        linecolor="#2c3e50",
+        linewidth=2
+    ),
+    yaxis=dict(
+        title=dict(text="Value ($)", font=dict(size=24, color="#2c3e50")),
+        tickfont=dict(size=18, color="#2c3e50"),
+        tickprefix="$",
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
+        showline=True,
+        linecolor="#2c3e50",
+        linewidth=2
+    ),
+    legend=dict(
+        orientation="h",
+        y=-0.15,
+        font=dict(size=16, color="#2c3e50"),
+        bgcolor="rgba(255,255,255,0.85)",
+        bordercolor="#2c3e50",
+        borderwidth=2
+    ),
+    # Enhanced background colors
+    plot_bgcolor=selected_bg_color,
+    paper_bgcolor="rgba(255,255,255,0.95)",  # Slightly off-white paper background
+    # Add a subtle border around the plot
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#2c3e50", width=2),
+            fillcolor="rgba(0,0,0,0)"
+        )
+    ]
 )
 
 st.plotly_chart(fig2, use_container_width=True)
