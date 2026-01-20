@@ -409,7 +409,8 @@ st.sidebar.subheader("Home (Owned Outright)")
 home_value_now = st.sidebar.number_input(
     "Home Value Today ($)", 
     value=int(st.session_state.get('imported_home_value_now', 1_100_000)), 
-    step=50_000
+    step=50_000,
+    key="home_value_now"
 )
 # Sliders need percentage values (0-100), but we store as 0-100 in session state for sliders
 home_growth_slider_value = st.session_state.get('imported_home_growth', 4.0)
@@ -418,14 +419,16 @@ home_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home_gr
 tax_deductions = st.sidebar.number_input(
     "Cost Basis + Improvements + 121 Deduction ($)",
     value=float(st.session_state.get('imported_tax_deductions', 300_000.0)),
-    step=25_000.0
+    step=25_000.0,
+    key="tax_deductions"
 )
 
 sell_home_years = st.sidebar.number_input(
     "Sell Home In (Years)", 
     min_value=0, 
     max_value=40, 
-    value=int(st.session_state.get('imported_sell_home_years', 5))
+    value=int(st.session_state.get('imported_sell_home_years', 5)),
+    key="sell_home_years"
 )
 sale_cost_pct_slider_value = st.session_state.get('imported_sale_cost_pct', 6.0)
 sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, float(sale_cost_pct_slider_value), key="sale_cost_pct_slider") / 100
@@ -434,32 +437,37 @@ st.sidebar.subheader("Mortgage")
 mortgage_balance = st.sidebar.number_input(
     "Existing Mortgage Balance ($)",
     value=int(st.session_state.get('imported_mortgage_balance', 420_000)),
-    step=10_000
+    step=10_000,
+    key="mortgage_balance"
 )
 mortgage_term = st.sidebar.number_input(
     "Remaining Term (yrs)",
     min_value=0,
     max_value=30,
-    value=int(st.session_state.get('imported_mortgage_term', 11))
+    value=int(st.session_state.get('imported_mortgage_term', 11)),
+    key="mortgage_term"
 )
 mortgage_rate_slider_value = st.session_state.get('imported_mortgage_rate', 2.40)
 mortgage_rate = st.sidebar.slider("Existing Mortgage Rate (%)", 0.0, 10.0, float(mortgage_rate_slider_value), key="mortgage_rate_slider") / 100
 mortgage_interest_cap = st.sidebar.number_input(
     "Cap on Mortgage Interest ($)",
     value=int(st.session_state.get('imported_mortgage_interest_cap', 750_000)),
-    step=50_000
+    step=50_000,
+    key="mortgage_interest_cap"
 )
 balloon_payment = st.sidebar.number_input(
     "Balloon Payment ($)",
     value=int(st.session_state.get('imported_balloon_payment', 0)),
-    step=10_000
+    step=10_000,
+    key="balloon_payment"
 )
 
 st.sidebar.subheader("Second Home (Owned Outright)")
 home2_value_now = st.sidebar.number_input(
     "Home Value Today ($)", 
     value=int(st.session_state.get('imported_home2_value_now', 0)), 
-    step=50_000
+    step=50_000,
+    key="home2_value_now"
 )
 home2_growth_slider_value = st.session_state.get('imported_home2_growth', 4.0)
 home2_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home2_growth_slider_value), step=0.1, key="home2_growth_slider") / 100
@@ -467,14 +475,16 @@ home2_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home2_
 home2_tax_deductions = st.sidebar.number_input(
     "Cost Basis + Improvements + 121 Deduction ($)",
     value=float(st.session_state.get('imported_home2_tax_deductions', 0.0)),
-    step=25_000.0
+    step=25_000.0,
+    key="home2_tax_deductions"
 )
 
 home2_sell_home_years = st.sidebar.number_input(
     "Sell Home In (Years)", 
     min_value=0, 
     max_value=40, 
-    value=int(st.session_state.get('imported_home2_sell_home_years', 0))
+    value=int(st.session_state.get('imported_home2_sell_home_years', 0)),
+    key="home2_sell_home_years"
 )
 home2_sale_cost_pct_slider_value = st.session_state.get('imported_home2_sale_cost_pct', 6.0)
 home2_sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, float(home2_sale_cost_pct_slider_value), key="home2_sale_cost_pct_slider") / 100
@@ -483,25 +493,29 @@ st.sidebar.subheader("Second Home Mortgage")
 home2_mortgage_balance = st.sidebar.number_input(
     "Existing Mortgage Balance ($)",
     value=int(st.session_state.get('imported_home2_mortgage_balance', 0)),
-    step=10_000
+    step=10_000,
+    key="home2_mortgage_balance"
 )
 home2_mortgage_term = st.sidebar.number_input(
     "Remaining Term (yrs)",
     min_value=0,
     max_value=30,
-    value=int(st.session_state.get('imported_home2_mortgage_term', 0))
+    value=int(st.session_state.get('imported_home2_mortgage_term', 0)),
+    key="home2_mortgage_term"
 )
 home2_mortgage_rate_slider_value = st.session_state.get('imported_home2_mortgage_rate', 2.40)
 home2_mortgage_rate = st.sidebar.slider("Existing Mortgage Rate (%)", 0.0, 10.0, float(home2_mortgage_rate_slider_value), key="home2_mortgage_rate_slider") / 100
 home2_mortgage_interest_cap = st.sidebar.number_input(
     "Cap on Mortgage Interest ($)",
     value=int(st.session_state.get('imported_home2_mortgage_interest_cap', 750_000)),
-    step=50_000
+    step=50_000,
+    key="home2_mortgage_interest_cap"
 )
 home2_balloon_payment = st.sidebar.number_input(
     "Balloon Payment ($)",
     value=int(st.session_state.get('imported_home2_balloon_payment', 0)),
-    step=10_000
+    step=10_000,
+    key="home2_balloon_payment"
 )
 
 st.sidebar.subheader("Income (Annual)")
