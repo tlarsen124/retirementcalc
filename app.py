@@ -152,6 +152,17 @@ def map_parameter_to_variable(param_name):
         ('mortgage_rate', ['existing mortgage rate', 'mortgage rate']),
         ('mortgage_interest_cap', ['cap on mortgage interest']),
         ('balloon_payment', ['balloon payment']),
+        # Second home mappings
+        ('home2_growth', ['second home value growth', 'home2 value growth', 'home2 growth', 'second home growth']),
+        ('home2_value_now', ['second home value today', 'home2 value today', 'second home value', 'home2 value']),
+        ('home2_tax_deductions', ['second home cost basis + improvements + 121 deduction', 'home2 cost basis + improvements + 121 deduction', 'second home cost basis', 'home2 cost basis', 'second home tax deductions', 'home2 tax deductions']),
+        ('home2_sell_home_years', ['second home sell home in', 'home2 sell home in', 'second home sell home', 'home2 sell home', 'second home sale years', 'home2 sale years']),
+        ('home2_sale_cost_pct', ['second home sale cost', 'home2 sale cost']),
+        ('home2_mortgage_balance', ['second home existing mortgage balance', 'home2 existing mortgage balance', 'second home mortgage balance', 'home2 mortgage balance']),
+        ('home2_mortgage_term', ['second home remaining term', 'home2 remaining term', 'second home mortgage term', 'home2 mortgage term']),
+        ('home2_mortgage_rate', ['second home existing mortgage rate', 'home2 existing mortgage rate', 'second home mortgage rate', 'home2 mortgage rate']),
+        ('home2_mortgage_interest_cap', ['second home cap on mortgage interest', 'home2 cap on mortgage interest']),
+        ('home2_balloon_payment', ['second home balloon payment', 'home2 balloon payment']),
         ('ssn_income', ['ssn', 'social security']),
         ('pension_income', ['pension']),
         ('employment_income', ['employment']),
@@ -173,6 +184,7 @@ def map_parameter_to_variable(param_name):
         ('living_infl', ['living inflation', 'inflation']),
         ('care_infl', ['care level inflation', 'care inflation', 'care infl']),
         ('cash_growth', ['money market growth', 'cash growth']),
+        ('debt_interest_rate', ['average debt interest rate', 'debt interest rate', 'debt rate']),
     ]
     
     # Collect all possible matches with their keyword lengths
@@ -244,6 +256,16 @@ def import_data(pasted_text):
             'mortgage_rate': 2.40,
             'mortgage_interest_cap': 750_000,
             'balloon_payment': 0,
+            'home2_value_now': 0,
+            'home2_growth': 4.0,
+            'home2_tax_deductions': 0.0,
+            'home2_sell_home_years': 0,
+            'home2_sale_cost_pct': 6.0,
+            'home2_mortgage_balance': 0,
+            'home2_mortgage_term': 0,
+            'home2_mortgage_rate': 2.40,
+            'home2_mortgage_interest_cap': 750_000,
+            'home2_balloon_payment': 0,
             'ssn_income': 15_600,
             'pension_income': 27_600,
             'employment_income': 0,
@@ -263,6 +285,7 @@ def import_data(pasted_text):
             'care_infl': 4.0,
             'stock_growth': 7.0,
             'cash_growth': 4.5,
+            'debt_interest_rate': 8.0,
         }
         
         imported_count = 0
@@ -295,8 +318,8 @@ def import_data(pasted_text):
                 elif var_name == 'mortgage_term' and not (0 <= value <= 30):
                     errors.append(f"{param_name}: Mortgage Term (Years) must be between 0 and 30")
                     continue
-                elif var_name in ['home_growth', 'sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate', 
-                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate']:
+                elif var_name in ['home_growth', 'home2_growth', 'sale_cost_pct', 'home2_sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate', 
+                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'debt_interest_rate']:
                     # These are percentages - validate 0-100 range
                     if not (0 <= value <= 100):
                         errors.append(f"{param_name}: Percentage must be between 0 and 100")
@@ -432,6 +455,55 @@ balloon_payment = st.sidebar.number_input(
     step=10_000
 )
 
+st.sidebar.subheader("Second Home (Owned Outright)")
+home2_value_now = st.sidebar.number_input(
+    "Home Value Today ($)", 
+    value=int(st.session_state.get('imported_home2_value_now', 0)), 
+    step=50_000
+)
+home2_growth_slider_value = st.session_state.get('imported_home2_growth', 4.0)
+home2_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home2_growth_slider_value), step=0.1) / 100
+
+home2_tax_deductions = st.sidebar.number_input(
+    "Cost Basis + Improvements + 121 Deduction ($)",
+    value=float(st.session_state.get('imported_home2_tax_deductions', 0.0)),
+    step=25_000.0
+)
+
+home2_sell_home_years = st.sidebar.number_input(
+    "Sell Home In (Years)", 
+    min_value=0, 
+    max_value=40, 
+    value=int(st.session_state.get('imported_home2_sell_home_years', 0))
+)
+home2_sale_cost_pct_slider_value = st.session_state.get('imported_home2_sale_cost_pct', 6.0)
+home2_sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, float(home2_sale_cost_pct_slider_value)) / 100
+
+st.sidebar.subheader("Second Home Mortgage")
+home2_mortgage_balance = st.sidebar.number_input(
+    "Existing Mortgage Balance ($)",
+    value=int(st.session_state.get('imported_home2_mortgage_balance', 0)),
+    step=10_000
+)
+home2_mortgage_term = st.sidebar.number_input(
+    "Remaining Term (yrs)",
+    min_value=0,
+    max_value=30,
+    value=int(st.session_state.get('imported_home2_mortgage_term', 0))
+)
+home2_mortgage_rate_slider_value = st.session_state.get('imported_home2_mortgage_rate', 2.40)
+home2_mortgage_rate = st.sidebar.slider("Existing Mortgage Rate (%)", 0.0, 10.0, float(home2_mortgage_rate_slider_value)) / 100
+home2_mortgage_interest_cap = st.sidebar.number_input(
+    "Cap on Mortgage Interest ($)",
+    value=int(st.session_state.get('imported_home2_mortgage_interest_cap', 750_000)),
+    step=50_000
+)
+home2_balloon_payment = st.sidebar.number_input(
+    "Balloon Payment ($)",
+    value=int(st.session_state.get('imported_home2_balloon_payment', 0)),
+    step=10_000
+)
+
 st.sidebar.subheader("Income (Annual)")
 ssn_income = st.sidebar.number_input(
     "SSN ($)", 
@@ -517,6 +589,8 @@ stock_growth_slider_value = st.session_state.get('imported_stock_growth', 7.0)
 stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, float(stock_growth_slider_value), step=0.1) / 100
 cash_growth_slider_value = st.session_state.get('imported_cash_growth', 4.5)
 cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, float(cash_growth_slider_value), step=0.1) / 100
+debt_interest_rate_slider_value = st.session_state.get('imported_debt_interest_rate', 8.0)
+debt_interest_rate = st.sidebar.slider("Average Debt Interest Rate (%)", 0.0, 20.0, float(debt_interest_rate_slider_value), step=0.1) / 100
 
 st.sidebar.subheader("Chart Appearance")
 show_background = st.sidebar.checkbox("Show Background Image", True)
@@ -568,6 +642,22 @@ else:
     monthly_mortgage_payment = 0
     monthly_mortgage_rate = 0
 
+# Initialize second home
+home2_value = home2_value_now
+home2_mortgage_balance_current = home2_mortgage_balance
+home2_mortgage_remaining_months = home2_mortgage_term * 12 if home2_mortgage_term > 0 else 0
+
+# Calculate monthly mortgage payment for second home if mortgage exists
+if home2_mortgage_balance_current > 0 and home2_mortgage_term > 0:
+    home2_monthly_mortgage_payment = calculate_monthly_payment(home2_mortgage_balance_current, home2_mortgage_rate, home2_mortgage_term)
+    home2_monthly_mortgage_rate = home2_mortgage_rate / 12
+else:
+    home2_monthly_mortgage_payment = 0
+    home2_monthly_mortgage_rate = 0
+
+# Initialize debt
+debt_balance = 0
+
 net_worth = []
 expenses_series = []
 cashflow_series = []
@@ -577,6 +667,9 @@ ira_series = []
 ira_liquid_series = []
 home_series = []
 mortgage_balance_series = []
+home2_series = []
+home2_mortgage_balance_series = []
+debt_series = []
 
 # Detailed tracking for calculation verification
 mortgage_interest_series = []
@@ -598,6 +691,13 @@ ira_withdrawal_tax_series = []
 home_sale_price_series = []
 home_sale_cost_series = []
 home_sale_tax_series = []
+home2_sale_price_series = []
+home2_sale_cost_series = []
+home2_sale_tax_series = []
+home2_mortgage_interest_series = []
+home2_mortgage_principal_series = []
+home2_mortgage_tax_shield_series = []
+debt_interest_series = []
 expense_type_series = []
 income_series = []
 notes_series = []
@@ -613,8 +713,17 @@ expense_mortgage_tax_shield_series = []
 income_annual = ssn_income + (pension_income + employment_income) * (1 - avg_tax_rate)
 
 for i, age in enumerate(ages):
+    # Calculate debt interest at the start of each year (before expenses)
+    debt_interest_annual = 0
+    if debt_balance > 0:
+        debt_interest_annual = debt_balance * debt_interest_rate
+        debt_balance += debt_interest_annual
+    
     # Grow home until sale
     home_value *= (1 + home_growth)
+    
+    # Grow second home until sale
+    home2_value *= (1 + home2_growth)
 
     # Determine expenses
     # Store base cost before inflation
@@ -639,6 +748,9 @@ for i, age in enumerate(ages):
     inflation_multiplier = (1 + inflation_rate) ** i
     inflated_base_cost = base_cost * inflation_multiplier
     expenses = inflated_base_cost
+    
+    # Add debt interest to expenses
+    expenses += debt_interest_annual
 
     # Mortgage payments and tax shield
     mortgage_payment_annual = 0
@@ -667,6 +779,34 @@ for i, age in enumerate(ages):
             if mortgage_remaining_months <= 0 or mortgage_balance_current <= 0:
                 mortgage_balance_current = 0
                 mortgage_remaining_months = 0
+
+    # Second home mortgage payments and tax shield
+    home2_mortgage_payment_annual = 0
+    home2_mortgage_interest_annual = 0
+    home2_mortgage_tax_shield = 0
+    
+    if home2_mortgage_balance_current > 0 and i < home2_sell_home_years:
+        # Calculate annual mortgage payment and interest
+        if home2_mortgage_remaining_months > 0:
+            home2_annual_interest, home2_annual_principal, home2_new_balance = calculate_annual_mortgage_amortization(
+                home2_mortgage_balance_current, home2_monthly_mortgage_payment, home2_monthly_mortgage_rate, home2_mortgage_remaining_months
+            )
+            home2_mortgage_interest_annual = home2_annual_interest
+            home2_mortgage_payment_annual = home2_annual_interest + home2_annual_principal
+            home2_mortgage_balance_current = home2_new_balance
+            home2_mortgage_remaining_months = max(0, home2_mortgage_remaining_months - 12)
+            
+            # Calculate tax shield (interest payment * (1 - tax_rate))
+            home2_mortgage_tax_shield = home2_mortgage_interest_annual * (1 - avg_tax_rate)
+            
+            # Add mortgage payment to expenses, then subtract tax shield
+            expenses += home2_mortgage_payment_annual
+            expenses -= home2_mortgage_tax_shield
+            
+            # If mortgage is paid off, set to 0
+            if home2_mortgage_remaining_months <= 0 or home2_mortgage_balance_current <= 0:
+                home2_mortgage_balance_current = 0
+                home2_mortgage_remaining_months = 0
 
     # Determine expense type for notes
     if age < start_age + self_years:
@@ -773,6 +913,39 @@ for i, age in enumerate(ages):
         home_value = 0
         liquid_home_value = 0
 
+    # Calculate liquid second home value (net proceeds after sale costs, taxes, and mortgage payoff)
+    # This represents what you'd actually get if you sold the second home today
+    home2_sale_price = home2_value
+    home2_sale_cost = home2_sale_price * home2_sale_cost_pct
+    home2_taxable_gain = max(home2_sale_price - home2_sale_cost - home2_tax_deductions, 0)
+    home2_tax = home2_taxable_gain * cap_gains_rate
+    home2_liquid_value = home2_sale_price - home2_sale_cost - home2_tax
+    
+    # Subtract remaining mortgage principal balance from liquid home value
+    # This represents the net proceeds after paying off the mortgage
+    if home2_mortgage_balance_current > 0:
+        home2_liquid_value -= home2_mortgage_balance_current
+        home2_liquid_value = max(0, home2_liquid_value)  # Ensure non-negative
+
+    # Second home sale (actual transaction)
+    home2_sale_this_year = False
+    if i == home2_sell_home_years:
+        home2_sale_this_year = True
+        # Pay off mortgage when home is sold
+        if home2_mortgage_balance_current > 0:
+            home2_mortgage_balance_current = 0
+            home2_mortgage_remaining_months = 0
+        
+        # Move home sale proceeds to brokerage account
+        # Add to existing brokerage (don't overwrite if primary home was also sold)
+        brokerage += home2_liquid_value
+        brokerage_cost_basis += home2_liquid_value  # Add to existing cost basis
+        # Keep existing tax_deferred (don't reset to 0)
+        brokerage_prev_value = brokerage  # Update for growth tracking
+        
+        home2_value = 0
+        home2_liquid_value = 0
+
     # Cash flow
     cash_flow = income_annual - expenses
     
@@ -783,6 +956,7 @@ for i, age in enumerate(ages):
     brokerage_withdrawal_tax = 0
     ira_withdrawal = 0
     ira_withdrawal_tax = 0
+    debt_taken_this_year = 0
 
     if cash_flow >= 0:
         # Surplus goes to money market
@@ -915,20 +1089,56 @@ for i, age in enumerate(ages):
                 
                 # Reduce deficit by net amount available
                 deficit -= net_available
+        
+        # 4. Take debt if all liquid accounts depleted and homes not sold or proceeds used
+        # Debt should ONLY be taken if ALL of the following are true:
+        # 1. Deficit > 0 (still need money)
+        # 2. Money Market is depleted
+        # 3. Brokerage is depleted (this means any home sale proceeds have been used)
+        # 4. IRA is depleted
+        # 5. Primary home: not sold yet OR sold but proceeds in brokerage are depleted
+        # 6. Second home: not sold yet OR sold but proceeds in brokerage are depleted
+        if deficit > 0:
+            money_market_depleted = money_market <= 0.01
+            brokerage_depleted = brokerage <= 0.01
+            ira_depleted = ira <= 0.01
+            primary_home_available = (i < sell_home_years and home_value > 0) or (i >= sell_home_years and brokerage_depleted)
+            second_home_available = (i < home2_sell_home_years and home2_value > 0) or (i >= home2_sell_home_years and brokerage_depleted)
+            
+            if money_market_depleted and brokerage_depleted and ira_depleted and primary_home_available and second_home_available:
+                # Take debt to cover remaining deficit
+                debt_taken_this_year = deficit
+                debt_balance += deficit
+                deficit = 0  # Deficit is now covered by debt
+            else:
+                debt_taken_this_year = 0
+        else:
+            debt_taken_this_year = 0
+    else:
+        debt_taken_this_year = 0
+                debt_taken_this_year = 0
+        else:
+            debt_taken_this_year = 0
+    else:
+        debt_taken_this_year = 0
 
     # Calculate liquid values for net worth
     ira_liquid = ira * (1 - avg_tax_rate)  # IRA withdrawals taxed as ordinary income
     # Money market and brokerage are already after withdrawal taxes, use gross value
     
-    total_assets = money_market + brokerage + ira_liquid + liquid_home_value
+    total_assets = money_market + brokerage + ira_liquid + liquid_home_value + home2_liquid_value - debt_balance
     
     # Build notes explaining calculations
     notes = []
     # Determine which inflation rate was used based on expense type
     current_infl_rate = living_infl if expense_type == "Self-Sufficient" else care_infl
     notes.append(f"Expenses: {expense_type} (inflated {current_infl_rate*100:.1f}%)")
+    if debt_interest_annual > 0:
+        notes.append(f"Debt interest: ${debt_interest_annual:,.0f}")
     if mortgage_interest_annual > 0:
         notes.append(f"Mortgage: ${mortgage_interest_annual:,.0f} interest, ${mortgage_payment_annual - mortgage_interest_annual:,.0f} principal, ${mortgage_tax_shield:,.0f} tax shield")
+    if home2_mortgage_interest_annual > 0:
+        notes.append(f"Home2 Mortgage: ${home2_mortgage_interest_annual:,.0f} interest, ${home2_mortgage_payment_annual - home2_mortgage_interest_annual:,.0f} principal, ${home2_mortgage_tax_shield:,.0f} tax shield")
     if money_market_growth != 0:
         notes.append(f"MM growth: ${money_market_growth:,.0f} ({cash_growth*100:.1f}%)")
     if brokerage_growth != 0:
@@ -937,6 +1147,8 @@ for i, age in enumerate(ages):
         notes.append(f"IRA growth: ${ira_growth:,.0f} ({stock_growth*100:.1f}%)")
     if home_sale_this_year:
         notes.append(f"HOME SALE: ${sale_price:,.0f} sale, ${sale_cost:,.0f} costs, ${home_tax:,.0f} tax, ${liquid_home_value:,.0f} net → brokerage")
+    if home2_sale_this_year:
+        notes.append(f"HOME2 SALE: ${home2_sale_price:,.0f} sale, ${home2_sale_cost:,.0f} costs, ${home2_tax:,.0f} tax, ${home2_liquid_value:,.0f} net → brokerage")
     if cash_flow >= 0:
         notes.append(f"Surplus: ${cash_flow:,.0f} → money market")
     else:
@@ -946,6 +1158,8 @@ for i, age in enumerate(ages):
             notes.append(f"Brokerage withdrawal: ${brokerage_withdrawal:,.0f} gross, ${brokerage_withdrawal_tax:,.0f} tax, ${brokerage_withdrawal - brokerage_withdrawal_tax:,.0f} net")
         if ira_withdrawal > 0:
             notes.append(f"IRA withdrawal: ${ira_withdrawal:,.0f} gross, ${ira_withdrawal_tax:,.0f} tax, ${ira_withdrawal - ira_withdrawal_tax:,.0f} net")
+        if debt_taken_this_year > 0:
+            notes.append(f"DEBT TAKEN: ${debt_taken_this_year:,.0f} added to debt (total: ${debt_balance:,.0f})")
     notes_str = " | ".join(notes)
 
     net_worth.append(total_assets)
@@ -957,6 +1171,9 @@ for i, age in enumerate(ages):
     ira_liquid_series.append(ira_liquid)
     home_series.append(liquid_home_value)
     mortgage_balance_series.append(mortgage_balance_current)
+    home2_series.append(home2_liquid_value)
+    home2_mortgage_balance_series.append(home2_mortgage_balance_current)
+    debt_series.append(debt_balance)
     
     # Append detailed tracking
     mortgage_interest_series.append(mortgage_interest_annual)
@@ -979,6 +1196,13 @@ for i, age in enumerate(ages):
     home_sale_price_series.append(sale_price if home_sale_this_year else 0)
     home_sale_cost_series.append(sale_cost if home_sale_this_year else 0)
     home_sale_tax_series.append(home_tax if home_sale_this_year else 0)
+    home2_sale_price_series.append(home2_sale_price if home2_sale_this_year else 0)
+    home2_sale_cost_series.append(home2_sale_cost if home2_sale_this_year else 0)
+    home2_sale_tax_series.append(home2_tax if home2_sale_this_year else 0)
+    home2_mortgage_interest_series.append(home2_mortgage_interest_annual)
+    home2_mortgage_principal_series.append(home2_mortgage_payment_annual - home2_mortgage_interest_annual if home2_mortgage_payment_annual > 0 else 0)
+    home2_mortgage_tax_shield_series.append(home2_mortgage_tax_shield)
+    debt_interest_series.append(debt_interest_annual)
     expense_type_series.append(expense_type)
     income_series.append(income_annual)
     notes_series.append(notes_str)
@@ -1000,7 +1224,9 @@ df = pd.DataFrame({
     "Brokerage": brokerage_series,
     "IRA": ira_series,
     "IRA Liquid": ira_liquid_series,
-    "Home Value": home_series
+    "Home Value": home_series,
+    "Home 2 Value": home2_series,
+    "Debt": debt_series
 })
 
 # =========================
@@ -1308,6 +1534,8 @@ fig2.add_trace(go.Scatter(x=df["Age"], y=df["Money Market"], name="Money Market"
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Brokerage"], name="Brokerage"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA"], name="IRA (Gross)"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", line=dict(dash="dot")))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home 2 Value"], name="Home 2 Value", line=dict(dash="dot")))
+fig2.add_trace(go.Scatter(x=df["Age"], y=-df["Debt"], name="Debt", line=dict(color="#c0392b", dash="dash")))
 
 fig2.update_layout(
     images=layout_images,
@@ -1378,7 +1606,9 @@ with st.expander("Show Projection Data"):
         "Brokerage",
         "IRA",
         "IRA Liquid",
-        "Home Value"
+        "Home Value",
+        "Home 2 Value",
+        "Debt"
     ]
 
     for col in currency_cols:
@@ -1406,6 +1636,11 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "Mortgage Interest": mortgage_interest_series,
         "Mortgage Principal": mortgage_principal_series,
         "Mortgage Tax Shield": mortgage_tax_shield_series,
+        "Home2 Mortgage Interest": home2_mortgage_interest_series,
+        "Home2 Mortgage Principal": home2_mortgage_principal_series,
+        "Home2 Mortgage Tax Shield": home2_mortgage_tax_shield_series,
+        "Debt Interest": debt_interest_series,
+        "Debt Balance": debt_series,
         "MM Growth": money_market_growth_series,
         "MM Cost Basis": money_market_cost_basis_series,
         "MM Tax Deferred": money_market_tax_deferred_series,
@@ -1423,6 +1658,9 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "Home Sale Price": home_sale_price_series,
         "Home Sale Cost": home_sale_cost_series,
         "Home Sale Tax": home_sale_tax_series,
+        "Home2 Sale Price": home2_sale_price_series,
+        "Home2 Sale Cost": home2_sale_cost_series,
+        "Home2 Sale Tax": home2_sale_tax_series,
         "Notes": notes_series
     })
     
@@ -1434,6 +1672,11 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "Mortgage Interest",
         "Mortgage Principal",
         "Mortgage Tax Shield",
+        "Home2 Mortgage Interest",
+        "Home2 Mortgage Principal",
+        "Home2 Mortgage Tax Shield",
+        "Debt Interest",
+        "Debt Balance",
         "MM Growth",
         "MM Cost Basis",
         "MM Tax Deferred",
@@ -1450,7 +1693,10 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "IRA Taxes",
         "Home Sale Price",
         "Home Sale Cost",
-        "Home Sale Tax"
+        "Home Sale Tax",
+        "Home2 Sale Price",
+        "Home2 Sale Cost",
+        "Home2 Sale Tax"
     ]
     
     for col in currency_cols_detailed:
@@ -1481,9 +1727,11 @@ with st.expander("Show Detailed Calculation Breakdown"):
     st.markdown("### Calculation Formulas")
     st.markdown("""
     **Net Worth Calculation:**
-    - Net Worth = Money Market + Brokerage + IRA Liquid + Home Value (Liquid)
+    - Net Worth = Money Market + Brokerage + IRA Liquid + Home Value (Liquid) + Home 2 Value (Liquid) - Debt Balance
     - IRA Liquid = IRA × (1 - Average Tax Rate)
     - Home Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
+    - Home 2 Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
+    - Debt Balance reduces net worth (negative value)
     
     **Income:**
     - Income (After Tax) = SSN + (Pension + Employment) × (1 - Average Tax Rate)
@@ -1492,7 +1740,9 @@ with st.expander("Show Detailed Calculation Breakdown"):
     **Expenses:**
     - Expenses = Base Cost × (1 + Living Inflation)^Years
     - Expenses with Mortgage = Base Expenses + Mortgage Payment - Mortgage Tax Shield
+    - Expenses with Second Home Mortgage = Base Expenses + Home2 Mortgage Payment - Home2 Mortgage Tax Shield
     - Mortgage Tax Shield = Mortgage Interest × (1 - Average Tax Rate)
+    - Debt Interest = Debt Balance × Debt Interest Rate (added to expenses annually)
     
     **Investment Growth:**
     - Money Market: Value × (1 + Cash Growth Rate)
@@ -1510,6 +1760,7 @@ with st.expander("Show Detailed Calculation Breakdown"):
     1. Money Market (with capital gains tax on growth portion) - withdraws gross amount to cover deficit + taxes
     2. Brokerage (with capital gains tax on growth portion) - withdraws gross amount to cover remaining deficit + taxes
     3. IRA (with ordinary income tax on full withdrawal) - withdraws gross amount to cover remaining deficit + taxes
+    4. Debt (only if all liquid accounts depleted AND homes not sold or proceeds used) - adds remaining deficit to debt balance
     
     **Home Sale (at specified year):**
     - Sale Price = Home Value (after growth)
@@ -1518,6 +1769,17 @@ with st.expander("Show Detailed Calculation Breakdown"):
     - Tax = Taxable Gain × Capital Gains Rate
     - Net Proceeds = Sale Price - Sale Cost - Tax - Mortgage Balance
     - Proceeds moved to Brokerage account
+    
+    **Second Home Sale (at specified year):**
+    - Same calculation as primary home
+    - Proceeds also moved to Brokerage account
+    
+    **Debt:**
+    - Debt is only taken when all liquid accounts (Money Market, Brokerage, IRA) are depleted
+    - AND when homes have not been sold yet OR home sale proceeds in brokerage have been depleted
+    - Debt Interest = Debt Balance × Debt Interest Rate (calculated annually, compounds)
+    - Debt Interest is added to expenses each year
+    - Debt Balance reduces net worth
     """)
 
 # =========================
