@@ -1114,13 +1114,6 @@ for i, age in enumerate(ages):
                 debt_taken_this_year = 0
         else:
             debt_taken_this_year = 0
-    else:
-        debt_taken_this_year = 0
-                debt_taken_this_year = 0
-        else:
-            debt_taken_this_year = 0
-    else:
-        debt_taken_this_year = 0
 
     # Calculate liquid values for net worth
     ira_liquid = ira * (1 - avg_tax_rate)  # IRA withdrawals taxed as ordinary income
