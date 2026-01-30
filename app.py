@@ -1284,7 +1284,7 @@ milestones = [
 # =========================
 # HEADER
 # =========================
-header_spacer, header_content = st.columns([0.25, 9.25])
+header_spacer_l, header_content, header_spacer_r = st.columns([0.75, 9.25, 0.75])
 
 with header_content:
     st.markdown(
@@ -1301,7 +1301,7 @@ with header_content:
 # PHASE HEADERS
 # =========================
 st.markdown("<br>", unsafe_allow_html=True)
-spacer, phase_col1, phase_col2, phase_col3 = st.columns([0.25, 3, 3, 3])
+spacer_l, phase_col1, phase_col2, phase_col3, spacer_r = st.columns([0.75, 3, 3, 3, 0.75])
 
 with phase_col1:
     st.markdown(
