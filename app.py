@@ -1331,8 +1331,7 @@ with phase_col3:
         """
         <div style="text-align:center; background-color:#87CEEB; padding:15px; border-radius:10px;">
             <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
-            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:10px;">Savings Deplete</p>
-            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:5px;">Additional support may be needed</p>
+            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:10px;">Savings Deplete May Need Additional Support</p>
         </div>
         """,
         unsafe_allow_html=True
