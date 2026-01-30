@@ -1557,7 +1557,10 @@ fig.update_layout(
     ]
 )
 
-st.plotly_chart(fig, use_container_width=True)
+# Slightly narrower than full width
+_chart_margin_l, _chart_col, _chart_margin_r = st.columns([0.02, 0.96, 0.02])
+with _chart_col:
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # =========================
