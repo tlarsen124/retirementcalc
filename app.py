@@ -1284,7 +1284,7 @@ milestones = [
 # =========================
 # HEADER
 # =========================
-header_spacer, header_content = st.columns([0.75, 9.25])
+header_spacer, header_content = st.columns([0.7, 9.25])
 
 with header_content:
     st.markdown(
@@ -1301,7 +1301,7 @@ with header_content:
 # PHASE HEADERS
 # =========================
 st.markdown("<br>", unsafe_allow_html=True)
-spacer, phase_col1, phase_col2, phase_col3 = st.columns([0.75, 3, 3, 3])
+spacer, phase_col1, phase_col2, phase_col3 = st.columns([0.7, 3, 3, 3])
 
 with phase_col1:
     st.markdown(
@@ -1426,7 +1426,7 @@ if show_background:
 # =========================
 # LAYOUT (NO GRIDLINES)
 # =========================
-# Add annotations for metrics at milestone points
+# Add annotations for metrics at milestone points (labels below dots)
 annotations = [
     # Starting Net Worth at Start milestone
     dict(
