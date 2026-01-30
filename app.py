@@ -104,6 +104,18 @@ def parse_pasted_data(pasted_text):
             param_name = parts[0].strip()
             value_str = parts[1].strip()
             
+            # If value has spaces and last word is numeric, treat it as "Param Name" + " value"
+            # e.g. "End age 80" -> param "End age", value "80"
+            if ' ' in value_str:
+                tokens = value_str.split()
+                last = tokens[-1].replace(',', '').replace('$', '').replace('%', '').strip()
+                try:
+                    float(last)
+                    param_name = param_name + ' ' + ' '.join(tokens[:-1])
+                    value_str = tokens[-1]
+                except (ValueError, TypeError):
+                    pass
+            
             # Try to convert to number
             try:
                 # Remove commas, dollar signs, and percent signs
@@ -1477,7 +1489,7 @@ annotations = [
 
 fig.update_layout(
     images=layout_images,
-    height=720,
+    height=900,
     annotations=annotations,
     legend=dict(
         orientation="h",
