@@ -1296,8 +1296,8 @@ with phase_col1:
         """
         <div style="text-align:center; background-color:#90EE90; padding:15px; border-radius:10px;">
             <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
-            <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">💰 Surplus</p>
-            <p style="text-align:center; font-size:36pt; color:#2c3e50; margin-top:5px;">Income > Costs</p>
+            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:10px;">💰 Surplus</p>
+            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:5px;">Income > Costs</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -1308,7 +1308,7 @@ with phase_col2:
         """
         <div style="text-align:center; background-color:#FFA500; padding:15px; border-radius:10px;">
             <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
-            <p style="text-align:center; font-size:36pt; color:#2c3e50; margin-top:10px;">Living Well On Savings</p>
+            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:10px;">Living Well On Savings</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -1319,8 +1319,8 @@ with phase_col3:
         """
         <div style="text-align:center; background-color:#87CEEB; padding:15px; border-radius:10px;">
             <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
-            <p style="text-align:center; font-size:36pt; color:#2c3e50; margin-top:10px;">Savings Deplete</p>
-            <p style="text-align:center; font-size:36pt; color:#2c3e50; margin-top:5px;">Additional support may be needed</p>
+            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:10px;">Savings Deplete</p>
+            <p style="text-align:center; font-size:26pt; color:#2c3e50; margin-top:5px;">Additional support may be needed</p>
         </div>
         """,
         unsafe_allow_html=True
