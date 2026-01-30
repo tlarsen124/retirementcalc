@@ -141,6 +141,7 @@ def map_parameter_to_variable(param_name):
     # Keywords within each mapping should be ordered from most specific (longest) to least specific
     mappings = [
         ('start_age', ['age']),
+        ('end_age', ['end age']),
         # Growth fields must come before base fields
         ('home_growth', ['home value growth', 'home growth']),
         ('home_value_now', ['home value today', 'home value']),
@@ -246,6 +247,7 @@ def import_data(pasted_text):
         # Default values for validation
         defaults = {
             'start_age': 70,
+            'end_age': 95,
             'home_value_now': 1_100_000,
             'home_growth': 4.0,
             'tax_deductions': 300_000.0,
@@ -311,6 +313,9 @@ def import_data(pasted_text):
                 # Validate ranges for specific variables
                 if var_name == 'start_age' and not (50 <= value <= 95):
                     errors.append(f"{param_name}: Age must be between 50 and 95")
+                    continue
+                elif var_name == 'end_age' and not (50 <= value <= 120):
+                    errors.append(f"{param_name}: End age must be between 50 and 120")
                     continue
                 elif var_name == 'sell_home_years' and not (0 <= value <= 40):
                     errors.append(f"{param_name}: Sell Home In (Years) must be between 0 and 40")
@@ -403,7 +408,13 @@ start_age = st.sidebar.number_input(
     max_value=95, 
     value=int(st.session_state.get('imported_start_age', 70))
 )
-end_age = 95
+end_age = st.sidebar.number_input(
+    "End Age",
+    min_value=start_age,
+    max_value=120,
+    value=max(start_age, int(st.session_state.get('imported_end_age', 95))),
+    key="end_age"
+)
 
 st.sidebar.subheader("Home (Owned Outright)")
 home_value_now = st.sidebar.number_input(
@@ -1284,7 +1295,7 @@ with phase_col1:
         <div style="text-align:center; background-color:#90EE90; padding:15px; border-radius:10px;">
             <h2 style="text-align:center; color:#2c3e50;">Phase 1</h2>
             <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">💰 Surplus</p>
-            <p style="text-align:center; font-size:16px; color:#2c3e50; margin-top:5px;">Income > Costs</p>
+            <p style="text-align:center; font-size:20px; color:#2c3e50; margin-top:5px;">Income > Costs</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -1295,7 +1306,7 @@ with phase_col2:
         """
         <div style="text-align:center; background-color:#FFA500; padding:15px; border-radius:10px;">
             <h2 style="text-align:center; color:#2c3e50;">Phase 2</h2>
-            <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">Living Well On Savings</p>
+            <p style="text-align:center; font-size:20px; color:#2c3e50; margin-top:10px;">Living Well On Savings</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -1306,8 +1317,8 @@ with phase_col3:
         """
         <div style="text-align:center; background-color:#87CEEB; padding:15px; border-radius:10px;">
             <h2 style="text-align:center; color:#2c3e50;">Phase 3</h2>
-            <p style="text-align:center; font-size:18px; color:#2c3e50; margin-top:10px;">Savings Deplete</p>
-            <p style="text-align:center; font-size:16px; color:#2c3e50; margin-top:5px;">Additional support may be needed</p>
+            <p style="text-align:center; font-size:20px; color:#2c3e50; margin-top:10px;">Savings Deplete</p>
+            <p style="text-align:center; font-size:20px; color:#2c3e50; margin-top:5px;">Additional support may be needed</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -1479,6 +1490,7 @@ fig.update_layout(
         tickfont=dict(size=24, color="#2c3e50"),
         tickmode="linear",
         dtick=5,
+        range=[start_age, end_age],
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
         gridwidth=1,
@@ -1550,6 +1562,7 @@ fig2.update_layout(
     xaxis=dict(
         title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
         tickfont=dict(size=18, color="#2c3e50"),
+        range=[start_age, end_age],
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
         gridwidth=1,

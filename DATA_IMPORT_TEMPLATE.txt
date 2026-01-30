@@ -1,4 +1,5 @@
 Age	70
+End age	95
 Home Value Today ($)	$1,100,000
 Home Value Growth (%)	4.0%
 Cost Basis + Improvements + 121 Deduction ($)	$300,000
