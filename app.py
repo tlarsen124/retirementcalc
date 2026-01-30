@@ -1438,7 +1438,7 @@ annotations = [
         arrowsize=2,
         arrowwidth=3,
         arrowcolor="white",
-        ax=0,
+        ax=45,
         ay=-50,
         bgcolor="rgba(255,255,255,0.9)",
         bordercolor="#2c3e50",
@@ -1476,7 +1476,7 @@ annotations = [
         arrowsize=2,
         arrowwidth=3,
         arrowcolor="white",
-        ax=0,
+        ax=-45,
         ay=-50,
         bgcolor="rgba(255,255,255,0.9)",
         bordercolor="#2c3e50",
@@ -1504,7 +1504,7 @@ fig.update_layout(
         tickfont=dict(size=24, color="#2c3e50"),
         tickmode="linear",
         dtick=5,
-        range=[start_age, end_age],
+        range=[start_age - 1, end_age + 1],
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
         gridwidth=1,
@@ -1544,7 +1544,7 @@ fig.update_layout(
     # Enhanced background colors with gradient effect
     plot_bgcolor=selected_bg_color,
     paper_bgcolor="rgba(255,255,255,0.95)",  # Slightly off-white paper background
-    margin=dict(t=50, b=100, l=70, r=70),
+    margin=dict(t=50, b=100, l=100, r=100),
     # Add a subtle border around the plot
     shapes=[
         dict(
@@ -1557,10 +1557,7 @@ fig.update_layout(
     ]
 )
 
-# Slightly narrower than full width
-_chart_margin_l, _chart_col, _chart_margin_r = st.columns([0.02, 0.96, 0.02])
-with _chart_col:
-    st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
 
 # =========================
