@@ -2057,18 +2057,24 @@ st.plotly_chart(fig2, use_container_width=True)
 # =========================
 # NET WORTH SPLIT (HOME EQUITY VS OTHER INVESTMENTS)
 # =========================
-home_equity_split = df["Home Value"] + df["Home 2 Value"] + df["Purchased Home Value"]
-other_investments_split = df["Net Worth"] - home_equity_split
+# Plot every 2 years for readability
+df_chart = df[(df["Age"] - start_age) % 2 == 0].copy()
+
+home_equity_split = df_chart["Home Value"] + df_chart["Home 2 Value"] + df_chart["Purchased Home Value"]
+other_investments_split = df_chart["Net Worth"] - home_equity_split
 
 fig3 = go.Figure()
 fig3.add_trace(go.Bar(
-    x=df["Age"],
+    x=df_chart["Age"],
     y=home_equity_split,
     name="Home Equity (All Homes)",
-    marker_color="#8e44ad"
+    marker_color="#8e44ad",
+    text=[f"{(v / 1_000_000):.2f}m" if v > 0 else "" for v in home_equity_split],
+    textposition="outside",
+    cliponaxis=False
 ))
 fig3.add_trace(go.Bar(
-    x=df["Age"],
+    x=df_chart["Age"],
     y=other_investments_split,
     name="Other Investments",
     marker_color="#3498db"
@@ -2082,6 +2088,8 @@ fig3.update_layout(
         title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
         tickfont=dict(size=18, color="#2c3e50"),
         range=[start_age, end_age],
+        tickmode="linear",
+        dtick=2,
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
         gridwidth=1,
@@ -2134,15 +2142,15 @@ st.plotly_chart(fig3, use_container_width=True)
 # =========================
 fig4 = go.Figure()
 fig4.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Income"],
+    x=df_chart["Age"],
+    y=df_chart["Income"],
     name="Income",
     mode="lines",
     line=dict(color="#27ae60", width=6)
 ))
 fig4.add_trace(go.Scatter(
-    x=df["Age"],
-    y=df["Expenses"],
+    x=df_chart["Age"],
+    y=df_chart["Expenses"],
     name="Expenses",
     mode="lines",
     line=dict(color="#c0392b", width=6)
@@ -2155,6 +2163,8 @@ fig4.update_layout(
         title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
         tickfont=dict(size=18, color="#2c3e50"),
         range=[start_age, end_age],
+        tickmode="linear",
+        dtick=2,
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
         gridwidth=1,
