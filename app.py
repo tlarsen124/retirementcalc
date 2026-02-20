@@ -178,6 +178,12 @@ def map_parameter_to_variable(param_name):
         ('home2_mortgage_rate', ['second home existing mortgage rate', 'home2 existing mortgage rate', 'second home mortgage rate', 'home2 mortgage rate']),
         ('home2_mortgage_interest_cap', ['second home cap on mortgage interest', 'home2 cap on mortgage interest']),
         ('home2_balloon_payment', ['second home balloon payment', 'home2 balloon payment']),
+        # Purchased home mappings
+        ('purchase_price', ['purchase price', 'bought a home purchase price', 'home purchase price']),
+        ('percent_down', ['percent down', 'down payment percent', 'down %']),
+        ('purchase_term', ['purchase term', 'purchase term years', 'term years', 'term (years)']),
+        ('purchase_rate', ['purchase interest', 'purchase rate', 'purchase interest rate', 'interest']),
+        ('purchase_growth', ['purchase home value growth', 'purchase home growth', 'purchased home growth']),
         ('ssn_start_age', ['ssn starts at age', 'social security starts at age', 'ssn start age']),
         ('employment_end_age', ['employment ends at age', 'employment end age', 'end employment age']),
         ('ssn_income', ['ssn', 'social security']),
@@ -284,6 +290,11 @@ def import_data(pasted_text):
             'home2_mortgage_rate': 2.40,
             'home2_mortgage_interest_cap': 750_000,
             'home2_balloon_payment': 0,
+            'purchase_price': 290_000,
+            'percent_down': 83.0,
+            'purchase_term': 5,
+            'purchase_rate': 7.75,
+            'purchase_growth': 4.0,
             'ssn_start_age': 70,
             'employment_end_age': 95,
             'ssn_income': 15_600,
@@ -347,7 +358,11 @@ def import_data(pasted_text):
                 elif var_name == 'mortgage_term' and not (0 <= value <= 30):
                     errors.append(f"{param_name}: Mortgage Term (Years) must be between 0 and 30")
                     continue
-                elif var_name in ['home_growth', 'home2_growth', 'sale_cost_pct', 'home2_sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate', 
+                elif var_name == 'purchase_term' and not (1 <= value <= 30):
+                    errors.append(f"{param_name}: Purchase Term (Years) must be between 1 and 30")
+                    continue
+                elif var_name in ['home_growth', 'home2_growth', 'purchase_growth', 'sale_cost_pct', 'home2_sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate',
+                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'purchase_rate', 'debt_interest_rate', 'percent_down']: 
                                  'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'debt_interest_rate']:
                     # These are percentages - validate 0-100 range
                     if not (0 <= value <= 100):
@@ -553,6 +568,32 @@ home2_balloon_payment = st.sidebar.number_input(
     key="home2_balloon_payment"
 )
 
+st.sidebar.subheader("Purchased Home")
+purchase_price = st.sidebar.number_input(
+    "Purchase Price ($)",
+    value=int(st.session_state.get('imported_purchase_price', 290_000)),
+    step=10_000,
+    key="purchase_price"
+)
+percent_down_slider_value = st.session_state.get('imported_percent_down', 83.0)
+percent_down = st.sidebar.slider("Percent Down (%)", 0.0, 100.0, float(percent_down_slider_value), step=0.1, key="percent_down_slider") / 100
+purchase_term = st.sidebar.number_input(
+    "Term (years)",
+    min_value=1,
+    max_value=30,
+    value=int(st.session_state.get('imported_purchase_term', 5)),
+    key="purchase_term"
+)
+purchase_rate_slider_value = st.session_state.get('imported_purchase_rate', 7.75)
+purchase_rate = st.sidebar.slider("Interest (%)", 0.0, 15.0, float(purchase_rate_slider_value), step=0.1, key="purchase_rate_slider") / 100
+purchase_growth_slider_value = st.session_state.get('imported_purchase_growth', 4.0)
+purchase_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(purchase_growth_slider_value), step=0.1, key="purchase_growth_slider") / 100
+
+# Calculate loan amount and display it
+down_payment = purchase_price * percent_down
+loan_amount = purchase_price - down_payment
+st.sidebar.info(f"**Loan Amount:** ${loan_amount:,.0f}")
+
 st.sidebar.subheader("Income (Annual)")
 ssn_income = st.sidebar.number_input(
     "SSN ($)", 
@@ -718,6 +759,19 @@ else:
     home2_monthly_mortgage_payment = 0
     home2_monthly_mortgage_rate = 0
 
+# Initialize purchased home
+purchase_home_value = purchase_price  # Start at purchase price
+purchase_mortgage_balance_current = loan_amount  # Initial loan amount
+purchase_mortgage_remaining_months = purchase_term * 12 if purchase_term > 0 else 0
+
+# Calculate monthly mortgage payment for purchased home if mortgage exists
+if purchase_mortgage_balance_current > 0 and purchase_term > 0:
+    purchase_monthly_mortgage_payment = calculate_monthly_payment(purchase_mortgage_balance_current, purchase_rate, purchase_term)
+    purchase_monthly_mortgage_rate = purchase_rate / 12
+else:
+    purchase_monthly_mortgage_payment = 0
+    purchase_monthly_mortgage_rate = 0
+
 # Initialize debt
 debt_balance = 0
 
@@ -732,6 +786,8 @@ home_series = []
 mortgage_balance_series = []
 home2_series = []
 home2_mortgage_balance_series = []
+purchase_home_series = []
+purchase_mortgage_balance_series = []
 debt_series = []
 
 # Detailed tracking for calculation verification
@@ -760,6 +816,9 @@ home2_sale_tax_series = []
 home2_mortgage_interest_series = []
 home2_mortgage_principal_series = []
 home2_mortgage_tax_shield_series = []
+purchase_mortgage_interest_series = []
+purchase_mortgage_principal_series = []
+purchase_mortgage_tax_shield_series = []
 debt_interest_series = []
 expense_type_series = []
 income_series = []
@@ -785,6 +844,9 @@ for i, age in enumerate(ages):
     
     # Grow second home until sale
     home2_value *= (1 + home2_growth)
+    
+    # Grow purchased home
+    purchase_home_value *= (1 + purchase_growth)
 
     # Determine expenses
     # Store base cost before inflation
@@ -868,6 +930,34 @@ for i, age in enumerate(ages):
             if home2_mortgage_remaining_months <= 0 or home2_mortgage_balance_current <= 0:
                 home2_mortgage_balance_current = 0
                 home2_mortgage_remaining_months = 0
+
+    # Purchased home mortgage payments and tax shield
+    purchase_mortgage_payment_annual = 0
+    purchase_mortgage_interest_annual = 0
+    purchase_mortgage_tax_shield = 0
+    
+    if purchase_mortgage_balance_current > 0:
+        # Calculate annual mortgage payment and interest
+        if purchase_mortgage_remaining_months > 0:
+            purchase_annual_interest, purchase_annual_principal, purchase_new_balance = calculate_annual_mortgage_amortization(
+                purchase_mortgage_balance_current, purchase_monthly_mortgage_payment, purchase_monthly_mortgage_rate, purchase_mortgage_remaining_months
+            )
+            purchase_mortgage_interest_annual = purchase_annual_interest
+            purchase_mortgage_payment_annual = purchase_annual_interest + purchase_annual_principal
+            purchase_mortgage_balance_current = purchase_new_balance
+            purchase_mortgage_remaining_months = max(0, purchase_mortgage_remaining_months - 12)
+            
+            # Calculate tax shield (interest payment * (1 - tax_rate))
+            purchase_mortgage_tax_shield = purchase_mortgage_interest_annual * (1 - avg_tax_rate)
+            
+            # Add mortgage payment to expenses, then subtract tax shield
+            expenses += purchase_mortgage_payment_annual
+            expenses -= purchase_mortgage_tax_shield
+            
+            # If mortgage is paid off, set to 0
+            if purchase_mortgage_remaining_months <= 0 or purchase_mortgage_balance_current <= 0:
+                purchase_mortgage_balance_current = 0
+                purchase_mortgage_remaining_months = 0
 
     # Determine expense type for notes
     if age < start_age + self_years:
@@ -1185,7 +1275,10 @@ for i, age in enumerate(ages):
     ira_liquid = ira * (1 - avg_tax_rate)  # IRA withdrawals taxed as ordinary income
     # Money market and brokerage are already after withdrawal taxes, use gross value
     
-    total_assets = money_market + brokerage + ira_liquid + liquid_home_value + home2_liquid_value - debt_balance
+    # Calculate liquid purchased home value (home value minus mortgage balance)
+    purchase_home_liquid_value = purchase_home_value - purchase_mortgage_balance_current
+    
+    total_assets = money_market + brokerage + ira_liquid + liquid_home_value + home2_liquid_value + purchase_home_liquid_value - debt_balance
     
     # Build notes explaining calculations
     notes = []
@@ -1198,6 +1291,8 @@ for i, age in enumerate(ages):
         notes.append(f"Mortgage: ${mortgage_interest_annual:,.0f} interest, ${mortgage_payment_annual - mortgage_interest_annual:,.0f} principal, ${mortgage_tax_shield:,.0f} tax shield")
     if home2_mortgage_interest_annual > 0:
         notes.append(f"Home2 Mortgage: ${home2_mortgage_interest_annual:,.0f} interest, ${home2_mortgage_payment_annual - home2_mortgage_interest_annual:,.0f} principal, ${home2_mortgage_tax_shield:,.0f} tax shield")
+    if purchase_mortgage_interest_annual > 0:
+        notes.append(f"Purchase Mortgage: ${purchase_mortgage_interest_annual:,.0f} interest, ${purchase_mortgage_payment_annual - purchase_mortgage_interest_annual:,.0f} principal, ${purchase_mortgage_tax_shield:,.0f} tax shield")
     if money_market_growth != 0:
         notes.append(f"MM growth: ${money_market_growth:,.0f} ({cash_growth*100:.1f}%)")
     if brokerage_growth != 0:
@@ -1232,6 +1327,8 @@ for i, age in enumerate(ages):
     mortgage_balance_series.append(mortgage_balance_current)
     home2_series.append(home2_liquid_value)
     home2_mortgage_balance_series.append(home2_mortgage_balance_current)
+    purchase_home_series.append(purchase_home_liquid_value)
+    purchase_mortgage_balance_series.append(purchase_mortgage_balance_current)
     debt_series.append(debt_balance)
     
     # Append detailed tracking
@@ -1261,6 +1358,9 @@ for i, age in enumerate(ages):
     home2_mortgage_interest_series.append(home2_mortgage_interest_annual)
     home2_mortgage_principal_series.append(home2_mortgage_payment_annual - home2_mortgage_interest_annual if home2_mortgage_payment_annual > 0 else 0)
     home2_mortgage_tax_shield_series.append(home2_mortgage_tax_shield)
+    purchase_mortgage_interest_series.append(purchase_mortgage_interest_annual)
+    purchase_mortgage_principal_series.append(purchase_mortgage_payment_annual - purchase_mortgage_interest_annual if purchase_mortgage_payment_annual > 0 else 0)
+    purchase_mortgage_tax_shield_series.append(purchase_mortgage_tax_shield)
     debt_interest_series.append(debt_interest_annual)
     expense_type_series.append(expense_type)
     income_series.append(income_annual)
@@ -1285,6 +1385,7 @@ df = pd.DataFrame({
     "IRA Liquid": ira_liquid_series,
     "Home Value": home_series,
     "Home 2 Value": home2_series,
+    "Purchased Home Value": purchase_home_series,
     "Debt": debt_series
 })
 
@@ -1594,6 +1695,7 @@ fig2.add_trace(go.Scatter(x=df["Age"], y=df["Brokerage"], name="Brokerage"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA"], name="IRA (Gross)"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", line=dict(dash="dot")))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home 2 Value"], name="Home 2 Value", line=dict(dash="dot")))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["Purchased Home Value"], name="Purchased Home Value", line=dict(dash="dot")))
 fig2.add_trace(go.Scatter(x=df["Age"], y=-df["Debt"], name="Debt", line=dict(color="#c0392b", dash="dash")))
 
 fig2.update_layout(
@@ -1668,6 +1770,7 @@ with st.expander("Show Projection Data"):
         "IRA Liquid",
         "Home Value",
         "Home 2 Value",
+        "Purchased Home Value",
         "Debt"
     ]
 
@@ -1787,10 +1890,11 @@ with st.expander("Show Detailed Calculation Breakdown"):
     st.markdown("### Calculation Formulas")
     st.markdown("""
     **Net Worth Calculation:**
-    - Net Worth = Money Market + Brokerage + IRA Liquid + Home Value (Liquid) + Home 2 Value (Liquid) - Debt Balance
+    - Net Worth = Money Market + Brokerage + IRA Liquid + Home Value (Liquid) + Home 2 Value (Liquid) + Purchased Home Value (Liquid) - Debt Balance
     - IRA Liquid = IRA × (1 - Average Tax Rate)
     - Home Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
     - Home 2 Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
+    - Purchased Home Value (Liquid) = Home Value - Mortgage Balance
     - Debt Balance reduces net worth (negative value)
     
     **Income:**

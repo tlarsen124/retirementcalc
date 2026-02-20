@@ -9,6 +9,11 @@ Remaining Term (yrs)	11
 Existing Mortgage Rate (%)	2.40
 Cap on Mortgage Interest ($)	750000
 Balloon Payment ($)	0
+Purchase Price ($)	290000
+Percent Down (%)	83.0
+Term (years)	5
+Interest (%)	7.75
+Home Value Growth (%)	4.0
 SSN ($)	15600
 SSN starts at age	70
 Pension ($)	27600
