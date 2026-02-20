@@ -392,9 +392,11 @@ def import_data(pasted_text):
                         continue
                     # Store as percentage (0-100) for sliders
                     st.session_state[f'imported_{var_name}'] = value
+                    st.session_state[f'{var_name}_slider'] = value  # sync to widget key so toggling others doesn't reset
                 else:
                     # Store as-is for other values
                     st.session_state[f'imported_{var_name}'] = value
+                    st.session_state[var_name] = value  # sync to widget key so toggling others doesn't reset
                 
                 imported_count += 1
                 
@@ -526,35 +528,36 @@ Average debt interest rate	8.0""", language="")
 
 st.sidebar.header("Key Assumptions")
 
-# Get default values from session state (imported) or use defaults
+# Use widget keys as source of truth so changing one input doesn't reset others (import syncs to these keys)
 start_age = st.sidebar.number_input(
     "Age", 
     min_value=50, 
     max_value=95, 
-    value=int(st.session_state.get('imported_start_age', 70))
+    value=int(st.session_state.get('start_age', 70)),
+    key="start_age"
 )
 end_age = st.sidebar.number_input(
     "End Age",
     min_value=start_age,
     max_value=120,
-    value=max(start_age, int(st.session_state.get('imported_end_age', 95))),
+    value=max(start_age, int(st.session_state.get('end_age', 95))),
     key="end_age"
 )
 
 st.sidebar.subheader("Home (Owned Outright)")
 home_value_now = st.sidebar.number_input(
     "Home Value Today ($)", 
-    value=int(st.session_state.get('imported_home_value_now', 1_100_000)), 
+    value=int(st.session_state.get('home_value_now', 1_100_000)), 
     step=50_000,
     key="home_value_now"
 )
 # Sliders need percentage values (0-100), but we store as 0-100 in session state for sliders
-home_growth_slider_value = st.session_state.get('imported_home_growth', 4.0)
+home_growth_slider_value = st.session_state.get('home_growth_slider', 4.0)
 home_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home_growth_slider_value), step=0.1, key="home_growth_slider") / 100
 
 tax_deductions = st.sidebar.number_input(
     "Cost Basis + Improvements + 121 Deduction ($)",
-    value=float(st.session_state.get('imported_tax_deductions', 300_000.0)),
+    value=float(st.session_state.get('tax_deductions', 300_000.0)),
     step=25_000.0,
     key="tax_deductions"
 )
@@ -563,16 +566,16 @@ sell_home_years = st.sidebar.number_input(
     "Sell Home In (Years)", 
     min_value=0, 
     max_value=40, 
-    value=int(st.session_state.get('imported_sell_home_years', 5)),
+    value=int(st.session_state.get('sell_home_years', 5)),
     key="sell_home_years"
 )
-sale_cost_pct_slider_value = st.session_state.get('imported_sale_cost_pct', 6.0)
+sale_cost_pct_slider_value = st.session_state.get('sale_cost_pct_slider', 6.0)
 sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, float(sale_cost_pct_slider_value), key="sale_cost_pct_slider") / 100
 
 st.sidebar.subheader("Mortgage")
 mortgage_balance = st.sidebar.number_input(
     "Existing Mortgage Balance ($)",
-    value=int(st.session_state.get('imported_mortgage_balance', 420_000)),
+    value=int(st.session_state.get('mortgage_balance', 420_000)),
     step=10_000,
     key="mortgage_balance"
 )
@@ -580,39 +583,39 @@ mortgage_term = st.sidebar.number_input(
     "Remaining Term (yrs)",
     min_value=0,
     max_value=30,
-    value=int(st.session_state.get('imported_mortgage_term', 11)),
+    value=int(st.session_state.get('mortgage_term', 11)),
     key="mortgage_term"
 )
-mortgage_rate_slider_value = st.session_state.get('imported_mortgage_rate', 2.40)
+mortgage_rate_slider_value = st.session_state.get('mortgage_rate_slider', 2.40)
 mortgage_rate = st.sidebar.slider("Existing Mortgage Rate (%)", 0.0, 10.0, float(mortgage_rate_slider_value), key="mortgage_rate_slider") / 100
 mortgage_interest_cap = st.sidebar.number_input(
     "Cap on Mortgage Interest ($)",
-    value=int(st.session_state.get('imported_mortgage_interest_cap', 750_000)),
+    value=int(st.session_state.get('mortgage_interest_cap', 750_000)),
     step=50_000,
     key="mortgage_interest_cap"
 )
 balloon_payment = st.sidebar.number_input(
     "Balloon Payment ($)",
-    value=int(st.session_state.get('imported_balloon_payment', 0)),
+    value=int(st.session_state.get('balloon_payment', 0)),
     step=10_000,
     key="balloon_payment"
 )
 
 home_property_tax = st.sidebar.number_input(
     "Property Tax (Yearly) ($)",
-    value=int(st.session_state.get('imported_home_property_tax', 0)),
+    value=int(st.session_state.get('home_property_tax', 0)),
     step=500,
     key="home_property_tax"
 )
 home_insurance = st.sidebar.number_input(
     "Insurance (Yearly) ($)",
-    value=int(st.session_state.get('imported_home_insurance', 0)),
+    value=int(st.session_state.get('home_insurance', 0)),
     step=500,
     key="home_insurance"
 )
 home_hoa_monthly = st.sidebar.number_input(
     "HOA (Monthly) ($)",
-    value=int(st.session_state.get('imported_home_hoa_monthly', 0)),
+    value=int(st.session_state.get('home_hoa_monthly', 0)),
     step=50,
     key="home_hoa_monthly"
 )
@@ -620,16 +623,16 @@ home_hoa_monthly = st.sidebar.number_input(
 st.sidebar.subheader("Second Home (Owned Outright)")
 home2_value_now = st.sidebar.number_input(
     "Home Value Today ($)", 
-    value=int(st.session_state.get('imported_home2_value_now', 0)), 
+    value=int(st.session_state.get('home2_value_now', 0)), 
     step=50_000,
     key="home2_value_now"
 )
-home2_growth_slider_value = st.session_state.get('imported_home2_growth', 4.0)
+home2_growth_slider_value = st.session_state.get('home2_growth_slider', 4.0)
 home2_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(home2_growth_slider_value), step=0.1, key="home2_growth_slider") / 100
 
 home2_tax_deductions = st.sidebar.number_input(
     "Cost Basis + Improvements + 121 Deduction ($)",
-    value=float(st.session_state.get('imported_home2_tax_deductions', 0.0)),
+    value=float(st.session_state.get('home2_tax_deductions', 0.0)),
     step=25_000.0,
     key="home2_tax_deductions"
 )
@@ -638,16 +641,16 @@ home2_sell_home_years = st.sidebar.number_input(
     "Sell Home In (Years)", 
     min_value=0, 
     max_value=40, 
-    value=int(st.session_state.get('imported_home2_sell_home_years', 0)),
+    value=int(st.session_state.get('home2_sell_home_years', 0)),
     key="home2_sell_home_years"
 )
-home2_sale_cost_pct_slider_value = st.session_state.get('imported_home2_sale_cost_pct', 6.0)
+home2_sale_cost_pct_slider_value = st.session_state.get('home2_sale_cost_pct_slider', 6.0)
 home2_sale_cost_pct = st.sidebar.slider("Sale Cost (%)", 0.0, 10.0, float(home2_sale_cost_pct_slider_value), key="home2_sale_cost_pct_slider") / 100
 
 st.sidebar.subheader("Second Home Mortgage")
 home2_mortgage_balance = st.sidebar.number_input(
     "Existing Mortgage Balance ($)",
-    value=int(st.session_state.get('imported_home2_mortgage_balance', 0)),
+    value=int(st.session_state.get('home2_mortgage_balance', 0)),
     step=10_000,
     key="home2_mortgage_balance"
 )
@@ -655,39 +658,39 @@ home2_mortgage_term = st.sidebar.number_input(
     "Remaining Term (yrs)",
     min_value=0,
     max_value=30,
-    value=int(st.session_state.get('imported_home2_mortgage_term', 0)),
+    value=int(st.session_state.get('home2_mortgage_term', 0)),
     key="home2_mortgage_term"
 )
-home2_mortgage_rate_slider_value = st.session_state.get('imported_home2_mortgage_rate', 2.40)
+home2_mortgage_rate_slider_value = st.session_state.get('home2_mortgage_rate_slider', 2.40)
 home2_mortgage_rate = st.sidebar.slider("Existing Mortgage Rate (%)", 0.0, 10.0, float(home2_mortgage_rate_slider_value), key="home2_mortgage_rate_slider") / 100
 home2_mortgage_interest_cap = st.sidebar.number_input(
     "Cap on Mortgage Interest ($)",
-    value=int(st.session_state.get('imported_home2_mortgage_interest_cap', 750_000)),
+    value=int(st.session_state.get('home2_mortgage_interest_cap', 750_000)),
     step=50_000,
     key="home2_mortgage_interest_cap"
 )
 home2_balloon_payment = st.sidebar.number_input(
     "Balloon Payment ($)",
-    value=int(st.session_state.get('imported_home2_balloon_payment', 0)),
+    value=int(st.session_state.get('home2_balloon_payment', 0)),
     step=10_000,
     key="home2_balloon_payment"
 )
 
 home2_property_tax = st.sidebar.number_input(
     "Property Tax (Yearly) ($)",
-    value=int(st.session_state.get('imported_home2_property_tax', 0)),
+    value=int(st.session_state.get('home2_property_tax', 0)),
     step=500,
     key="home2_property_tax"
 )
 home2_insurance = st.sidebar.number_input(
     "Insurance (Yearly) ($)",
-    value=int(st.session_state.get('imported_home2_insurance', 0)),
+    value=int(st.session_state.get('home2_insurance', 0)),
     step=500,
     key="home2_insurance"
 )
 home2_hoa_monthly = st.sidebar.number_input(
     "HOA (Monthly) ($)",
-    value=int(st.session_state.get('imported_home2_hoa_monthly', 0)),
+    value=int(st.session_state.get('home2_hoa_monthly', 0)),
     step=50,
     key="home2_hoa_monthly"
 )
@@ -695,22 +698,22 @@ home2_hoa_monthly = st.sidebar.number_input(
 st.sidebar.subheader("Purchased Home")
 purchase_price = st.sidebar.number_input(
     "Purchase Price ($)",
-    value=int(st.session_state.get('imported_purchase_price', 290_000)),
+    value=int(st.session_state.get('purchase_price', 290_000)),
     step=10_000,
     key="purchase_price"
 )
-percent_down_slider_value = st.session_state.get('imported_percent_down', 83.0)
+percent_down_slider_value = st.session_state.get('percent_down_slider', 83.0)
 percent_down = st.sidebar.slider("Percent Down (%)", 0.0, 100.0, float(percent_down_slider_value), step=0.1, key="percent_down_slider") / 100
 purchase_term = st.sidebar.number_input(
     "Term (years)",
     min_value=1,
     max_value=30,
-    value=int(st.session_state.get('imported_purchase_term', 5)),
+    value=int(st.session_state.get('purchase_term', 5)),
     key="purchase_term"
 )
-purchase_rate_slider_value = st.session_state.get('imported_purchase_rate', 7.75)
+purchase_rate_slider_value = st.session_state.get('purchase_rate_slider', 7.75)
 purchase_rate = st.sidebar.slider("Interest (%)", 0.0, 15.0, float(purchase_rate_slider_value), step=0.1, key="purchase_rate_slider") / 100
-purchase_growth_slider_value = st.session_state.get('imported_purchase_growth', 4.0)
+purchase_growth_slider_value = st.session_state.get('purchase_growth_slider', 4.0)
 purchase_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(purchase_growth_slider_value), step=0.1, key="purchase_growth_slider") / 100
 
 # Calculate loan amount and display it
@@ -720,19 +723,19 @@ st.sidebar.info(f"**Loan Amount:** ${loan_amount:,.0f}")
 
 purchase_property_tax = st.sidebar.number_input(
     "Property Tax (Yearly) ($)",
-    value=int(st.session_state.get('imported_purchase_property_tax', 0)),
+    value=int(st.session_state.get('purchase_property_tax', 0)),
     step=500,
     key="purchase_property_tax"
 )
 purchase_insurance = st.sidebar.number_input(
     "Insurance (Yearly) ($)",
-    value=int(st.session_state.get('imported_purchase_insurance', 0)),
+    value=int(st.session_state.get('purchase_insurance', 0)),
     step=500,
     key="purchase_insurance"
 )
 purchase_hoa_monthly = st.sidebar.number_input(
     "HOA (Monthly) ($)",
-    value=int(st.session_state.get('imported_purchase_hoa_monthly', 0)),
+    value=int(st.session_state.get('purchase_hoa_monthly', 0)),
     step=50,
     key="purchase_hoa_monthly"
 )
@@ -740,48 +743,48 @@ purchase_hoa_monthly = st.sidebar.number_input(
 st.sidebar.subheader("Income (Annual)")
 ssn_income = st.sidebar.number_input(
     "SSN ($)", 
-    value=int(st.session_state.get('imported_ssn_income', 15_600)), 
+    value=int(st.session_state.get('ssn_income', 15_600)), 
     step=500
 )
 pension_income = st.sidebar.number_input(
     "Pension ($)", 
-    value=int(st.session_state.get('imported_pension_income', 27_600)), 
+    value=int(st.session_state.get('pension_income', 27_600)), 
     step=500
 )
 employment_income = st.sidebar.number_input(
     "Employment ($)", 
-    value=int(st.session_state.get('imported_employment_income', 0)), 
+    value=int(st.session_state.get('employment_income', 0)), 
     step=1_000
 )
 ssn_start_age = st.sidebar.number_input(
     "SSN starts at age",
     min_value=start_age,
     max_value=end_age,
-    value=int(st.session_state.get('imported_ssn_start_age', start_age)),
+    value=int(st.session_state.get('ssn_start_age', start_age)),
     key="ssn_start_age"
 )
 employment_end_age = st.sidebar.number_input(
     "Employment ends at age",
     min_value=start_age,
     max_value=end_age,
-    value=max(start_age, min(end_age, int(st.session_state.get('imported_employment_end_age', end_age)))),
+    value=max(start_age, min(end_age, int(st.session_state.get('employment_end_age', end_age)))),
     key="employment_end_age"
 )
 
 st.sidebar.subheader("Investments")
 cash_start = st.sidebar.number_input(
     "Cash / Money Market ($)", 
-    value=int(st.session_state.get('imported_cash_start', 145_000)), 
+    value=int(st.session_state.get('cash_start', 145_000)), 
     step=5_000
 )
 ira_start = st.sidebar.number_input(
     "IRA / Stocks ($)", 
-    value=int(st.session_state.get('imported_ira_start', 1_200_000)), 
+    value=int(st.session_state.get('ira_start', 1_200_000)), 
     step=25_000
 )
 roth_ira_start = st.sidebar.number_input(
     "Roth IRA ($)", 
-    value=int(st.session_state.get('imported_roth_ira_start', 0)), 
+    value=int(st.session_state.get('roth_ira_start', 0)), 
     step=25_000
 )
 
@@ -789,59 +792,59 @@ st.sidebar.subheader("Living Expenses")
 
 self_years = st.sidebar.number_input(
     "Self-Sufficient (years)", 
-    value=int(st.session_state.get('imported_self_years', 2))
+    value=int(st.session_state.get('self_years', 2))
 )
 self_cost = st.sidebar.number_input(
     "Self-Sufficient Annual Cost ($)", 
-    value=int(st.session_state.get('imported_self_cost', 37_812)), 
+    value=int(st.session_state.get('self_cost', 37_812)), 
     step=2_000
 )
 
 ind_years = st.sidebar.number_input(
     "Independent Living starts in (years)", 
-    value=int(st.session_state.get('imported_ind_years', 2))
+    value=int(st.session_state.get('ind_years', 2))
 )
 ind_cost = st.sidebar.number_input(
     "Independent Living Annual Cost ($)", 
-    value=int(st.session_state.get('imported_ind_cost', 108_000)), 
+    value=int(st.session_state.get('ind_cost', 108_000)), 
     step=2_000
 )
 
 assist_years = st.sidebar.number_input(
     "Assisted Living starts in (years)", 
-    value=int(st.session_state.get('imported_assist_years', 10))
+    value=int(st.session_state.get('assist_years', 10))
 )
 assist_cost = st.sidebar.number_input(
     "Assisted Living Annual Cost ($)", 
-    value=int(st.session_state.get('imported_assist_cost', 114_000)), 
+    value=int(st.session_state.get('assist_cost', 114_000)), 
     step=2_000
 )
 
 memory_years = st.sidebar.number_input(
     "Memory Care starts in (years)", 
-    value=int(st.session_state.get('imported_memory_years', 20))
+    value=int(st.session_state.get('memory_years', 20))
 )
 memory_cost = st.sidebar.number_input(
     "Memory Care Annual Cost ($)", 
-    value=int(st.session_state.get('imported_memory_cost', 120_000)), 
+    value=int(st.session_state.get('memory_cost', 120_000)), 
     step=5_000
 )
 
 st.sidebar.subheader("Taxes & Assumptions")
-avg_tax_rate_slider_value = st.session_state.get('imported_avg_tax_rate', 30.0)
+avg_tax_rate_slider_value = st.session_state.get('avg_tax_rate_slider', 30.0)
 avg_tax_rate = st.sidebar.slider("Average Tax Rate (%)", 0.0, 40.0, float(avg_tax_rate_slider_value), step=1.0) / 100
-cap_gains_rate_slider_value = st.session_state.get('imported_cap_gains_rate', 25.0)
+cap_gains_rate_slider_value = st.session_state.get('cap_gains_rate_slider', 25.0)
 cap_gains_rate = st.sidebar.slider("Capital Gains Tax (%)", 0.0, 40.0, float(cap_gains_rate_slider_value), step=1.0) / 100
 
-living_infl_slider_value = st.session_state.get('imported_living_infl', 3.0)
+living_infl_slider_value = st.session_state.get('living_infl_slider', 3.0)
 living_infl = st.sidebar.slider("Living Inflation (%)", 0.0, 6.0, float(living_infl_slider_value), step=0.1) / 100
-care_infl_slider_value = st.session_state.get('imported_care_infl', 4.0)
+care_infl_slider_value = st.session_state.get('care_infl_slider', 4.0)
 care_infl = st.sidebar.slider("Care Level Inflation (%)", 0.0, 10.0, float(care_infl_slider_value), step=0.1) / 100
-stock_growth_slider_value = st.session_state.get('imported_stock_growth', 7.0)
+stock_growth_slider_value = st.session_state.get('stock_growth_slider', 7.0)
 stock_growth = st.sidebar.slider("Stocks / IRA Growth (%)", 0.0, 10.0, float(stock_growth_slider_value), step=0.1) / 100
-cash_growth_slider_value = st.session_state.get('imported_cash_growth', 4.5)
+cash_growth_slider_value = st.session_state.get('cash_growth_slider', 4.5)
 cash_growth = st.sidebar.slider("Money Market Growth (%)", 0.0, 6.0, float(cash_growth_slider_value), step=0.1) / 100
-debt_interest_rate_slider_value = st.session_state.get('imported_debt_interest_rate', 8.0)
+debt_interest_rate_slider_value = st.session_state.get('debt_interest_rate_slider', 8.0)
 debt_interest_rate = st.sidebar.slider("Average Debt Interest Rate (%)", 0.0, 20.0, float(debt_interest_rate_slider_value), step=0.1) / 100
 
 st.sidebar.subheader("Chart Appearance")
