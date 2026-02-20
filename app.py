@@ -2065,7 +2065,7 @@ fig3.add_trace(go.Bar(
     x=df["Age"],
     y=home_equity_split,
     name="Home Equity (All Homes)",
-    marker_color="#e67e22"
+    marker_color="#8e44ad"
 ))
 fig3.add_trace(go.Bar(
     x=df["Age"],
@@ -2076,7 +2076,7 @@ fig3.add_trace(go.Bar(
 
 fig3.update_layout(
     images=layout_images,
-    barmode="stack",
+    barmode="group",
     height=540,
     xaxis=dict(
         title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
@@ -2138,14 +2138,14 @@ fig4.add_trace(go.Scatter(
     y=df["Income"],
     name="Income",
     mode="lines",
-    line=dict(color="#27ae60", width=3)
+    line=dict(color="#27ae60", width=6)
 ))
 fig4.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Expenses"],
     name="Expenses",
     mode="lines",
-    line=dict(color="#c0392b", width=3)
+    line=dict(color="#c0392b", width=6)
 ))
 
 fig4.update_layout(
