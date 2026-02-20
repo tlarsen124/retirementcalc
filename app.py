@@ -1611,6 +1611,8 @@ for i, age in enumerate(ages):
     brokerage_withdrawal_tax_series.append(brokerage_withdrawal_tax)
     ira_withdrawal_series.append(ira_withdrawal)
     ira_withdrawal_tax_series.append(ira_withdrawal_tax)
+    roth_ira_withdrawal_series.append(roth_ira_withdrawal)
+    roth_ira_withdrawal_tax_series.append(roth_ira_withdrawal_tax)
     # Track home sale details (only populated when sale occurs, but calculation happens every year)
     home_sale_price_series.append(sale_price if home_sale_this_year else 0)
     home_sale_cost_series.append(sale_cost if home_sale_this_year else 0)
