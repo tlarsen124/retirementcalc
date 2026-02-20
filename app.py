@@ -1659,6 +1659,7 @@ for i, age in enumerate(ages):
 df = pd.DataFrame({
     "Age": ages,
     "Net Worth": net_worth,
+    "Income": income_series,
     "Expenses": expenses_series,
     "Cash Flow": cashflow_series,
     "Money Market": money_market_series,
@@ -2042,6 +2043,154 @@ fig2.update_layout(
 st.plotly_chart(fig2, use_container_width=True)
 
 # =========================
+# NET WORTH SPLIT (HOME EQUITY VS OTHER INVESTMENTS)
+# =========================
+home_equity_split = df["Home Value"] + df["Home 2 Value"] + df["Purchased Home Value"]
+other_investments_split = df["Net Worth"] - home_equity_split
+
+fig3 = go.Figure()
+fig3.add_trace(go.Bar(
+    x=df["Age"],
+    y=home_equity_split,
+    name="Home Equity (All Homes)",
+    marker_color="#e67e22"
+))
+fig3.add_trace(go.Bar(
+    x=df["Age"],
+    y=other_investments_split,
+    name="Other Investments",
+    marker_color="#3498db"
+))
+
+fig3.update_layout(
+    images=layout_images,
+    barmode="stack",
+    height=540,
+    xaxis=dict(
+        title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
+        tickfont=dict(size=18, color="#2c3e50"),
+        range=[start_age, end_age],
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
+        showline=True,
+        linecolor="#2c3e50",
+        linewidth=2
+    ),
+    yaxis=dict(
+        title=dict(text="Value ($)", font=dict(size=24, color="#2c3e50")),
+        tickfont=dict(size=18, color="#2c3e50"),
+        tickprefix="$",
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
+        showline=True,
+        linecolor="#2c3e50",
+        linewidth=2
+    ),
+    legend=dict(
+        orientation="h",
+        y=-0.15,
+        font=dict(size=16, color="#2c3e50"),
+        bgcolor="rgba(255,255,255,0.85)",
+        bordercolor="#2c3e50",
+        borderwidth=2
+    ),
+    plot_bgcolor=selected_bg_color,
+    paper_bgcolor="rgba(255,255,255,0.95)",
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#2c3e50", width=2),
+            fillcolor="rgba(0,0,0,0)"
+        )
+    ]
+)
+
+st.plotly_chart(fig3, use_container_width=True)
+
+# =========================
+# INCOME VS EXPENSES
+# =========================
+fig4 = go.Figure()
+fig4.add_trace(go.Scatter(
+    x=df["Age"],
+    y=df["Income"],
+    name="Income",
+    mode="lines",
+    line=dict(color="#27ae60", width=3)
+))
+fig4.add_trace(go.Scatter(
+    x=df["Age"],
+    y=df["Expenses"],
+    name="Expenses",
+    mode="lines",
+    line=dict(color="#c0392b", width=3)
+))
+
+fig4.update_layout(
+    images=layout_images,
+    height=520,
+    xaxis=dict(
+        title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
+        tickfont=dict(size=18, color="#2c3e50"),
+        range=[start_age, end_age],
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
+        showline=True,
+        linecolor="#2c3e50",
+        linewidth=2
+    ),
+    yaxis=dict(
+        title=dict(text="Amount ($)", font=dict(size=24, color="#2c3e50")),
+        tickfont=dict(size=18, color="#2c3e50"),
+        tickprefix="$",
+        showgrid=True,
+        gridcolor="rgba(44,62,80,0.15)",
+        gridwidth=1,
+        zeroline=True,
+        zerolinecolor="rgba(44,62,80,0.3)",
+        zerolinewidth=2,
+        showline=True,
+        linecolor="#2c3e50",
+        linewidth=2
+    ),
+    legend=dict(
+        orientation="h",
+        y=-0.15,
+        font=dict(size=16, color="#2c3e50"),
+        bgcolor="rgba(255,255,255,0.85)",
+        bordercolor="#2c3e50",
+        borderwidth=2
+    ),
+    plot_bgcolor=selected_bg_color,
+    paper_bgcolor="rgba(255,255,255,0.95)",
+    shapes=[
+        dict(
+            type="rect",
+            xref="paper", yref="paper",
+            x0=0, y0=0, x1=1, y1=1,
+            line=dict(color="#2c3e50", width=2),
+            fillcolor="rgba(0,0,0,0)"
+        )
+    ]
+)
+
+st.plotly_chart(fig4, use_container_width=True)
+
+# =========================
 # DATA TABLE (COLLAPSIBLE)
 # =========================
 with st.expander("Show Projection Data"):
@@ -2049,6 +2198,7 @@ with st.expander("Show Projection Data"):
 
     currency_cols = [
         "Net Worth",
+        "Income",
         "Expenses",
         "Cash Flow",
         "Money Market",
