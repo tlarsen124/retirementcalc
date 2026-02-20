@@ -323,6 +323,7 @@ def import_data(pasted_text):
             'employment_income': 0,
             'cash_start': 145_000,
             'ira_start': 1_200_000,
+            'roth_ira_start': 0,
             'self_years': 2,
             'self_cost': 37_812,
             'ind_years': 2,
@@ -496,7 +497,9 @@ Interest (%)	7.75
 Home Value Growth (%)	4.0
 Property Tax (Yearly) ($)	0
 Insurance (Yearly) ($)	0
-HOA (Monthly) ($)	0""", language="")
+HOA (Monthly) ($)	0
+IRA / Stocks ($)	1200000
+Roth IRA ($)	0""", language="")
         st.markdown("*Note: Replace the example values with your actual data. Use tab or multiple spaces between keyword and value.*")
     
     st.sidebar.markdown("---")
@@ -757,6 +760,11 @@ ira_start = st.sidebar.number_input(
     value=int(st.session_state.get('imported_ira_start', 1_200_000)), 
     step=25_000
 )
+roth_ira_start = st.sidebar.number_input(
+    "Roth IRA ($)", 
+    value=int(st.session_state.get('imported_roth_ira_start', 0)), 
+    step=25_000
+)
 
 st.sidebar.subheader("Living Expenses")
 
@@ -911,6 +919,7 @@ money_market_series = []
 brokerage_series = []
 ira_series = []
 ira_liquid_series = []
+roth_ira_series = []
 home_series = []
 mortgage_balance_series = []
 home2_series = []
@@ -944,12 +953,15 @@ brokerage_growth_series = []
 brokerage_cost_basis_series = []
 brokerage_tax_deferred_series = []
 ira_growth_series = []
+roth_ira_growth_series = []
 mm_withdrawal_series = []
 mm_withdrawal_tax_series = []
 brokerage_withdrawal_series = []
 brokerage_withdrawal_tax_series = []
 ira_withdrawal_series = []
 ira_withdrawal_tax_series = []
+roth_ira_withdrawal_series = []
+roth_ira_withdrawal_tax_series = []
 home_sale_price_series = []
 home_sale_cost_series = []
 home_sale_tax_series = []
@@ -1199,6 +1211,11 @@ for i, age in enumerate(ages):
     ira_before_growth = ira
     ira *= (1 + stock_growth)
     ira_growth = ira - ira_before_growth
+    
+    # Roth IRA: Grow (tax-free, no tax calculation needed)
+    roth_ira_before_growth = roth_ira
+    roth_ira *= (1 + stock_growth)
+    roth_ira_growth = roth_ira - roth_ira_before_growth
 
     # Calculate liquid home value (net proceeds after sale costs, taxes, and mortgage payoff)
     # This represents what you'd actually get if you sold the home today
@@ -1280,6 +1297,8 @@ for i, age in enumerate(ages):
     brokerage_withdrawal_tax = 0
     ira_withdrawal = 0
     ira_withdrawal_tax = 0
+    roth_ira_withdrawal = 0
+    roth_ira_withdrawal_tax = 0
     debt_taken_this_year = 0
 
     if cash_flow >= 0:
@@ -1414,22 +1433,48 @@ for i, age in enumerate(ages):
                 # Reduce deficit by net amount available
                 deficit -= net_available
         
-        # 4. Take debt if all liquid accounts depleted and homes not sold or proceeds used
+        # 4. Withdraw from Roth IRA (tax-free)
+        if deficit > 0 and roth_ira > 0:
+            take_roth_ira = min(roth_ira, deficit)
+            
+            if take_roth_ira > 0:
+                # Track withdrawals (no tax for Roth IRA)
+                roth_ira_withdrawal = take_roth_ira
+                roth_ira_withdrawal_tax = 0  # Roth IRA withdrawals are tax-free
+                net_available = take_roth_ira  # Full amount available since no tax
+                
+                # Reduce account value
+                roth_ira -= take_roth_ira
+                roth_ira = max(0, roth_ira)  # Ensure roth_ira can't go negative
+                
+                # Check if Roth IRA account is depleted
+                if roth_ira < 0.01:  # Handle floating-point precision
+                    roth_ira = 0
+                
+                # Reduce deficit by net amount available
+                deficit -= net_available
+        else:
+            roth_ira_withdrawal = 0
+            roth_ira_withdrawal_tax = 0
+        
+        # 5. Take debt if all liquid accounts depleted and homes not sold or proceeds used
         # Debt should ONLY be taken if ALL of the following are true:
         # 1. Deficit > 0 (still need money)
         # 2. Money Market is depleted
         # 3. Brokerage is depleted (this means any home sale proceeds have been used)
         # 4. IRA is depleted
-        # 5. Primary home: not sold yet OR sold but proceeds in brokerage are depleted
-        # 6. Second home: not sold yet OR sold but proceeds in brokerage are depleted
+        # 5. Roth IRA is depleted
+        # 6. Primary home: not sold yet OR sold but proceeds in brokerage are depleted
+        # 7. Second home: not sold yet OR sold but proceeds in brokerage are depleted
         if deficit > 0:
             money_market_depleted = money_market <= 0.01
             brokerage_depleted = brokerage <= 0.01
             ira_depleted = ira <= 0.01
+            roth_ira_depleted = roth_ira <= 0.01
             primary_home_available = (i < sell_home_years and home_value > 0) or (i >= sell_home_years and brokerage_depleted)
             second_home_available = (i < home2_sell_home_years and home2_value > 0) or (i >= home2_sell_home_years and brokerage_depleted)
             
-            if money_market_depleted and brokerage_depleted and ira_depleted and primary_home_available and second_home_available:
+            if money_market_depleted and brokerage_depleted and ira_depleted and roth_ira_depleted and primary_home_available and second_home_available:
                 # Take debt to cover remaining deficit
                 debt_taken_this_year = deficit
                 debt_balance += deficit
@@ -1439,14 +1484,19 @@ for i, age in enumerate(ages):
         else:
             debt_taken_this_year = 0
 
-    # Calculate liquid values for net worth
+    # Calculate net worth using total values (not liquid/after-tax)
+    # IRA: Use total value (not liquid/after-tax)
+    # Roth IRA: Use total value (tax-free)
+    # Home values: Total value minus mortgage balance (not sale proceeds)
+    home_net_value = home_value - mortgage_balance_current if i < sell_home_years else 0
+    home2_net_value = home2_value - home2_mortgage_balance_current if i < home2_sell_home_years else 0
+    purchase_home_net_value = purchase_home_value - purchase_mortgage_balance_current
+    
+    # Calculate liquid IRA for display purposes (not used in net worth)
     ira_liquid = ira * (1 - avg_tax_rate)  # IRA withdrawals taxed as ordinary income
-    # Money market and brokerage are already after withdrawal taxes, use gross value
     
-    # Calculate liquid purchased home value (home value minus mortgage balance)
-    purchase_home_liquid_value = purchase_home_value - purchase_mortgage_balance_current
-    
-    total_assets = money_market + brokerage + ira_liquid + liquid_home_value + home2_liquid_value + purchase_home_liquid_value - debt_balance
+    # Net worth = Total assets minus liabilities
+    total_assets = money_market + brokerage + ira + roth_ira + home_net_value + home2_net_value + purchase_home_net_value - debt_balance
     
     # Build notes explaining calculations
     notes = []
@@ -1467,6 +1517,8 @@ for i, age in enumerate(ages):
         notes.append(f"Brokerage growth: ${brokerage_growth:,.0f} ({stock_growth*100:.1f}%)")
     if ira_growth != 0:
         notes.append(f"IRA growth: ${ira_growth:,.0f} ({stock_growth*100:.1f}%)")
+    if roth_ira_growth != 0:
+        notes.append(f"Roth IRA growth: ${roth_ira_growth:,.0f} ({stock_growth*100:.1f}%)")
     if home_sale_this_year:
         notes.append(f"HOME SALE: ${sale_price:,.0f} sale, ${sale_cost:,.0f} costs, ${home_tax:,.0f} tax, ${liquid_home_value:,.0f} net → brokerage")
     if home2_sale_this_year:
@@ -1480,6 +1532,8 @@ for i, age in enumerate(ages):
             notes.append(f"Brokerage withdrawal: ${brokerage_withdrawal:,.0f} gross, ${brokerage_withdrawal_tax:,.0f} tax, ${brokerage_withdrawal - brokerage_withdrawal_tax:,.0f} net")
         if ira_withdrawal > 0:
             notes.append(f"IRA withdrawal: ${ira_withdrawal:,.0f} gross, ${ira_withdrawal_tax:,.0f} tax, ${ira_withdrawal - ira_withdrawal_tax:,.0f} net")
+        if roth_ira_withdrawal > 0:
+            notes.append(f"Roth IRA withdrawal: ${roth_ira_withdrawal:,.0f} (tax-free)")
         if debt_taken_this_year > 0:
             notes.append(f"DEBT TAKEN: ${debt_taken_this_year:,.0f} added to debt (total: ${debt_balance:,.0f})")
     notes_str = " | ".join(notes)
@@ -1510,11 +1564,13 @@ for i, age in enumerate(ages):
     brokerage_series.append(brokerage)
     ira_series.append(ira)
     ira_liquid_series.append(ira_liquid)
-    home_series.append(liquid_home_value)
+    roth_ira_series.append(roth_ira)
+    roth_ira_growth_series.append(roth_ira_growth)
+    home_series.append(home_net_value)
     mortgage_balance_series.append(mortgage_balance_current)
-    home2_series.append(home2_liquid_value)
+    home2_series.append(home2_net_value)
     home2_mortgage_balance_series.append(home2_mortgage_balance_current)
-    purchase_home_series.append(purchase_home_liquid_value)
+    purchase_home_series.append(purchase_home_net_value)
     purchase_mortgage_balance_series.append(purchase_mortgage_balance_current)
     debt_series.append(debt_balance)
     
@@ -1584,6 +1640,7 @@ df = pd.DataFrame({
     "Brokerage": brokerage_series,
     "IRA": ira_series,
     "IRA Liquid": ira_liquid_series,
+    "Roth IRA": roth_ira_series,
     "Home Value": home_series,
     "Home 2 Value": home2_series,
     "Purchased Home Value": purchase_home_series,
@@ -1897,6 +1954,7 @@ fig2 = go.Figure()
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Money Market"], name="Money Market"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Brokerage"], name="Brokerage"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["IRA"], name="IRA (Gross)"))
+fig2.add_trace(go.Scatter(x=df["Age"], y=df["Roth IRA"], name="Roth IRA"))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home Value"], name="Home Value", line=dict(dash="dot")))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Home 2 Value"], name="Home 2 Value", line=dict(dash="dot")))
 fig2.add_trace(go.Scatter(x=df["Age"], y=df["Purchased Home Value"], name="Purchased Home Value", line=dict(dash="dot")))
@@ -1972,6 +2030,7 @@ with st.expander("Show Projection Data"):
         "Brokerage",
         "IRA",
         "IRA Liquid",
+        "Roth IRA",
         "Home Value",
         "Home 2 Value",
         "Purchased Home Value",
@@ -2025,6 +2084,9 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "IRA Tax Deferred": ira_series,
         "IRA Withdrawal": ira_withdrawal_series,
         "IRA Taxes": ira_withdrawal_tax_series,
+        "Roth IRA Growth": roth_ira_growth_series,
+        "Roth IRA Withdrawal": roth_ira_withdrawal_series,
+        "Roth IRA Taxes": roth_ira_withdrawal_tax_series,
         "Home Sale Price": home_sale_price_series,
         "Home Sale Cost": home_sale_cost_series,
         "Home Sale Tax": home_sale_tax_series,
@@ -2061,6 +2123,9 @@ with st.expander("Show Detailed Calculation Breakdown"):
         "IRA Tax Deferred",
         "IRA Withdrawal",
         "IRA Taxes",
+        "Roth IRA Growth",
+        "Roth IRA Withdrawal",
+        "Roth IRA Taxes",
         "Home Sale Price",
         "Home Sale Cost",
         "Home Sale Tax",
@@ -2097,11 +2162,12 @@ with st.expander("Show Detailed Calculation Breakdown"):
     st.markdown("### Calculation Formulas")
     st.markdown("""
     **Net Worth Calculation:**
-    - Net Worth = Money Market + Brokerage + IRA Liquid + Home Value (Liquid) + Home 2 Value (Liquid) + Purchased Home Value (Liquid) - Debt Balance
-    - IRA Liquid = IRA × (1 - Average Tax Rate)
-    - Home Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
-    - Home 2 Value (Liquid) = Sale Price - Sale Cost - Tax - Mortgage Balance
-    - Purchased Home Value (Liquid) = Home Value - Mortgage Balance
+    - Net Worth = Money Market + Brokerage + IRA (Total) + Roth IRA (Total) + Home Values - Mortgage Balances - Debt Balance
+    - IRA: Uses total value (not liquid/after-tax) for net worth calculation
+    - Roth IRA: Uses total value (tax-free, no tax on withdrawals)
+    - Home Value = Home Value - Mortgage Balance (total value minus mortgage, not sale proceeds)
+    - Home 2 Value = Home 2 Value - Home 2 Mortgage Balance
+    - Purchased Home Value = Purchased Home Value - Purchased Home Mortgage Balance
     - Debt Balance reduces net worth (negative value)
     
     **Income:**
@@ -2120,6 +2186,7 @@ with st.expander("Show Detailed Calculation Breakdown"):
     - Money Market: Value × (1 + Cash Growth Rate)
     - Brokerage: Value × (1 + Stock Growth Rate)
     - IRA: Value × (1 + Stock Growth Rate)
+    - Roth IRA: Value × (1 + Stock Growth Rate)
     
     **Tax-Deferred Tracking:**
     - Money Market & Brokerage: Growth amounts are tracked separately as "tax-deferred"
@@ -2132,7 +2199,8 @@ with st.expander("Show Detailed Calculation Breakdown"):
     1. Money Market (with capital gains tax on growth portion) - withdraws gross amount to cover deficit + taxes
     2. Brokerage (with capital gains tax on growth portion) - withdraws gross amount to cover remaining deficit + taxes
     3. IRA (with ordinary income tax on full withdrawal) - withdraws gross amount to cover remaining deficit + taxes
-    4. Debt (only if all liquid accounts depleted AND homes not sold or proceeds used) - adds remaining deficit to debt balance
+    4. Roth IRA (tax-free, no tax on withdrawal) - withdraws amount needed to cover remaining deficit
+    5. Debt (only if all liquid accounts depleted AND homes not sold or proceeds used) - adds remaining deficit to debt balance
     
     **Home Sale (at specified year):**
     - Sale Price = Home Value (after growth)

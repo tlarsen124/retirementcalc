@@ -28,6 +28,7 @@ Employment ($)	$0
 Employment ends at age	95
 Cash / Money Market ($)	$145,000
 IRA / Stocks ($)	$1,200,000
+Roth IRA ($)	$0
 Self-Sufficient (years)	2
 Self-Sufficient Annual Cost ($)	$37,812
 Independent Living starts in (years)	2
