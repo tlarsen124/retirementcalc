@@ -441,7 +441,7 @@ if input_mode == "Import from Data":
         "Paste your data here:",
         value="",
         height=200,
-        placeholder="Age\t70\nHome Value Today ($)\t1100000\nHome Value Growth (%)\t4.0\n..."
+        placeholder="Age\t70\nHome Value Today ($)\t1100000\nProperty Tax (Yearly) ($)\t5000\nInsurance (Yearly) ($)\t2000\nHOA (Monthly) ($)\t300\n..."
     )
     
     if st.sidebar.button("Import Data", type="primary"):
@@ -455,8 +455,45 @@ if input_mode == "Import from Data":
         else:
             st.sidebar.warning("Please paste data before importing.")
     
+    # Template showing pasteable keywords for property expenses
+    with st.sidebar.expander("📋 **Property Expense Keywords Template**"):
+        st.markdown("**Copy and paste these keywords with your values:**")
+        st.markdown("""
+        **Home 1 (First Home):**
+        ```
+        Property Tax (Yearly) ($)	5000
+        home property tax	5000
+        Insurance (Yearly) ($)	2000
+        home insurance	2000
+        HOA (Monthly) ($)	300
+        home hoa	300
+        ```
+        
+        **Home 2 (Second Home):**
+        ```
+        home2 property tax	4000
+        second home property tax	4000
+        home2 insurance	1500
+        second home insurance	1500
+        home2 hoa	250
+        second home hoa	250
+        ```
+        
+        **Purchased Home (Third Home):**
+        ```
+        purchase property tax	3500
+        purchased home property tax	3500
+        purchase insurance	1800
+        purchased home insurance	1800
+        purchase hoa	200
+        purchased home hoa	200
+        ```
+        
+        *Note: Use tab or multiple spaces to separate keyword from value. Any of the keyword variations above will work.*
+        """)
+    
     st.sidebar.markdown("---")
-    st.sidebar.info("💡 **Tip:** Imported values populate the inputs below. You can edit them at any time.")
+    st.sidebar.info("💡 **Tip:** Imported values populate the inputs below. You can edit them at any time. Property expenses (tax, insurance, HOA) can be imported using the keywords shown in the template above.")
 
 st.sidebar.header("Key Assumptions")
 
