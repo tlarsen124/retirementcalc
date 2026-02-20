@@ -455,45 +455,52 @@ if input_mode == "Import from Data":
         else:
             st.sidebar.warning("Please paste data before importing.")
     
-    # Template showing pasteable keywords for property expenses
-    with st.sidebar.expander("📋 **Property Expense Keywords Template**"):
-        st.markdown("**Copy and paste these keywords with your values:**")
-        st.markdown("""
-        **Home 1 (First Home):**
-        ```
-        Property Tax (Yearly) ($)	5000
-        home property tax	5000
-        Insurance (Yearly) ($)	2000
-        home insurance	2000
-        HOA (Monthly) ($)	300
-        home hoa	300
-        ```
-        
-        **Home 2 (Second Home):**
-        ```
-        home2 property tax	4000
-        second home property tax	4000
-        home2 insurance	1500
-        second home insurance	1500
-        home2 hoa	250
-        second home hoa	250
-        ```
-        
-        **Purchased Home (Third Home):**
-        ```
-        purchase property tax	3500
-        purchased home property tax	3500
-        purchase insurance	1800
-        purchased home insurance	1800
-        purchase hoa	200
-        purchased home hoa	200
-        ```
-        
-        *Note: Use tab or multiple spaces to separate keyword from value. Any of the keyword variations above will work.*
-        """)
+    # Comprehensive template showing all importable fields
+    with st.sidebar.expander("📋 **Complete Import Template (Age through Third Home)**"):
+        st.markdown("**Copy and paste this template with your values (use tab or spaces to separate):**")
+        st.code("""Age	70
+End age	95
+Home Value Today ($)	1100000
+Home Value Growth (%)	4.0
+Cost Basis + Improvements + 121 Deduction ($)	300000
+Sell Home In (Years)	5
+Sale Cost (%)	6.0
+Existing Mortgage Balance ($)	420000
+Remaining Term (yrs)	11
+Existing Mortgage Rate (%)	2.40
+Cap on Mortgage Interest ($)	750000
+Balloon Payment ($)	0
+Property Tax (Yearly) ($)	5000
+Insurance (Yearly) ($)	2000
+HOA (Monthly) ($)	300
+Second Home (Owned Outright)
+Home Value Today ($)	0
+Home Value Growth (%)	4.0
+Cost Basis + Improvements + 121 Deduction ($)	0
+Sell Home In (Years)	0
+Sale Cost (%)	6.0
+Second Home Mortgage
+Existing Mortgage Balance ($)	0
+Remaining Term (yrs)	0
+Existing Mortgage Rate (%)	2.40
+Cap on Mortgage Interest ($)	750000
+Balloon Payment ($)	0
+Property Tax (Yearly) ($)	0
+Insurance (Yearly) ($)	0
+HOA (Monthly) ($)	0
+Purchased Home
+Purchase Price ($)	290000
+Percent Down (%)	83.0
+Term (years)	5
+Interest (%)	7.75
+Home Value Growth (%)	4.0
+Property Tax (Yearly) ($)	0
+Insurance (Yearly) ($)	0
+HOA (Monthly) ($)	0""", language="")
+        st.markdown("*Note: Replace the example values with your actual data. Use tab or multiple spaces between keyword and value.*")
     
     st.sidebar.markdown("---")
-    st.sidebar.info("💡 **Tip:** Imported values populate the inputs below. You can edit them at any time. Property expenses (tax, insurance, HOA) can be imported using the keywords shown in the template above.")
+    st.sidebar.info("💡 **Tip:** Imported values populate the inputs below. You can edit them at any time.")
 
 st.sidebar.header("Key Assumptions")
 
