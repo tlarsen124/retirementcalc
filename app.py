@@ -178,6 +178,8 @@ def map_parameter_to_variable(param_name):
         ('home2_mortgage_rate', ['second home existing mortgage rate', 'home2 existing mortgage rate', 'second home mortgage rate', 'home2 mortgage rate']),
         ('home2_mortgage_interest_cap', ['second home cap on mortgage interest', 'home2 cap on mortgage interest']),
         ('home2_balloon_payment', ['second home balloon payment', 'home2 balloon payment']),
+        ('ssn_start_age', ['ssn starts at age', 'social security starts at age', 'ssn start age']),
+        ('employment_end_age', ['employment ends at age', 'employment end age', 'end employment age']),
         ('ssn_income', ['ssn', 'social security']),
         ('pension_income', ['pension']),
         ('employment_income', ['employment']),
@@ -282,6 +284,8 @@ def import_data(pasted_text):
             'home2_mortgage_rate': 2.40,
             'home2_mortgage_interest_cap': 750_000,
             'home2_balloon_payment': 0,
+            'ssn_start_age': 70,
+            'employment_end_age': 95,
             'ssn_income': 15_600,
             'pension_income': 27_600,
             'employment_income': 0,
@@ -330,6 +334,12 @@ def import_data(pasted_text):
                     continue
                 elif var_name == 'end_age' and not (50 <= value <= 120):
                     errors.append(f"{param_name}: End age must be between 50 and 120")
+                    continue
+                elif var_name == 'ssn_start_age' and not (50 <= value <= 120):
+                    errors.append(f"{param_name}: SSN start age must be between 50 and 120")
+                    continue
+                elif var_name == 'employment_end_age' and not (50 <= value <= 120):
+                    errors.append(f"{param_name}: Employment end age must be between 50 and 120")
                     continue
                 elif var_name == 'sell_home_years' and not (0 <= value <= 40):
                     errors.append(f"{param_name}: Sell Home In (Years) must be between 0 and 40")
@@ -559,6 +569,20 @@ employment_income = st.sidebar.number_input(
     value=int(st.session_state.get('imported_employment_income', 0)), 
     step=1_000
 )
+ssn_start_age = st.sidebar.number_input(
+    "SSN starts at age",
+    min_value=start_age,
+    max_value=end_age,
+    value=int(st.session_state.get('imported_ssn_start_age', start_age)),
+    key="ssn_start_age"
+)
+employment_end_age = st.sidebar.number_input(
+    "Employment ends at age",
+    min_value=start_age,
+    max_value=end_age,
+    value=max(start_age, min(end_age, int(st.session_state.get('imported_employment_end_age', end_age)))),
+    key="employment_end_age"
+)
 
 st.sidebar.subheader("Investments")
 cash_start = st.sidebar.number_input(
@@ -748,8 +772,6 @@ expense_inflation_multiplier_series = []
 expense_inflated_base_cost_series = []
 expense_mortgage_payment_series = []
 expense_mortgage_tax_shield_series = []
-
-income_annual = ssn_income + (pension_income + employment_income) * (1 - avg_tax_rate)
 
 for i, age in enumerate(ages):
     # Calculate debt interest at the start of each year (before expenses)
@@ -984,6 +1006,11 @@ for i, age in enumerate(ages):
         
         home2_value = 0
         home2_liquid_value = 0
+
+    # Income for this year: SSN from ssn_start_age, employment through employment_end_age (inclusive), pension always
+    ssn_this_year = ssn_income if age >= ssn_start_age else 0
+    employment_this_year = employment_income if age <= employment_end_age else 0
+    income_annual = ssn_this_year + (pension_income + employment_this_year) * (1 - avg_tax_rate)
 
     # Cash flow
     cash_flow = income_annual - expenses
@@ -1767,7 +1794,8 @@ with st.expander("Show Detailed Calculation Breakdown"):
     - Debt Balance reduces net worth (negative value)
     
     **Income:**
-    - Income (After Tax) = SSN + (Pension + Employment) × (1 - Average Tax Rate)
+    - Income (After Tax) is computed each year from: SSN (if age ≥ SSN starts at age) + (Pension + Employment if age ≤ Employment ends at age) × (1 - Average Tax Rate)
+    - SSN is included only from "SSN starts at age" onward. Employment is included only through "Employment ends at age" (inclusive). Pension is included every year.
     - Note: SSN is tax-exempt; only Pension and Employment income are taxed
     
     **Expenses:**

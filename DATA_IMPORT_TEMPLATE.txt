@@ -11,8 +11,10 @@ Existing Mortgage Rate (%)	2.4
 Cap on Mortgage Interest ($)	$750,000
 Balloon Payment ($)	0
 SSN ($)	$15,600
+SSN starts at age	70
 Pension ($)	$27,600
 Employment ($)	$0
+Employment ends at age	95
 Cash / Money Market ($)	$145,000
 IRA / Stocks ($)	$1,200,000
 Self-Sufficient (years)	2
