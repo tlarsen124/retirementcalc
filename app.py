@@ -178,12 +178,24 @@ def map_parameter_to_variable(param_name):
         ('home2_mortgage_rate', ['second home existing mortgage rate', 'home2 existing mortgage rate', 'second home mortgage rate', 'home2 mortgage rate']),
         ('home2_mortgage_interest_cap', ['second home cap on mortgage interest', 'home2 cap on mortgage interest']),
         ('home2_balloon_payment', ['second home balloon payment', 'home2 balloon payment']),
+        # Home 1 property expenses
+        ('home_property_tax', ['home property tax', 'property tax', 'first home property tax', 'home 1 property tax']),
+        ('home_insurance', ['home insurance', 'insurance', 'first home insurance', 'home 1 insurance']),
+        ('home_hoa_monthly', ['home hoa', 'hoa', 'first home hoa', 'home hoa monthly', 'home 1 hoa']),
+        # Home 2 property expenses
+        ('home2_property_tax', ['home2 property tax', 'second home property tax', 'home 2 property tax']),
+        ('home2_insurance', ['home2 insurance', 'second home insurance', 'home 2 insurance']),
+        ('home2_hoa_monthly', ['home2 hoa', 'second home hoa', 'home 2 hoa', 'home2 hoa monthly']),
         # Purchased home mappings
         ('purchase_price', ['purchase price', 'bought a home purchase price', 'home purchase price']),
         ('percent_down', ['percent down', 'down payment percent', 'down %']),
         ('purchase_term', ['purchase term', 'purchase term years', 'term years', 'term (years)']),
         ('purchase_rate', ['purchase interest', 'purchase rate', 'purchase interest rate', 'interest']),
         ('purchase_growth', ['purchase home value growth', 'purchase home growth', 'purchased home growth']),
+        # Purchased home property expenses
+        ('purchase_property_tax', ['purchase property tax', 'purchased home property tax', 'third home property tax']),
+        ('purchase_insurance', ['purchase insurance', 'purchased home insurance', 'third home insurance']),
+        ('purchase_hoa_monthly', ['purchase hoa', 'purchased home hoa', 'third home hoa', 'purchase hoa monthly']),
         ('ssn_start_age', ['ssn starts at age', 'social security starts at age', 'ssn start age']),
         ('employment_end_age', ['employment ends at age', 'employment end age', 'end employment age']),
         ('ssn_income', ['ssn', 'social security']),
@@ -295,6 +307,15 @@ def import_data(pasted_text):
             'purchase_term': 5,
             'purchase_rate': 7.75,
             'purchase_growth': 4.0,
+            'home_property_tax': 0,
+            'home_insurance': 0,
+            'home_hoa_monthly': 0,
+            'home2_property_tax': 0,
+            'home2_insurance': 0,
+            'home2_hoa_monthly': 0,
+            'purchase_property_tax': 0,
+            'purchase_insurance': 0,
+            'purchase_hoa_monthly': 0,
             'ssn_start_age': 70,
             'employment_end_age': 95,
             'ssn_income': 15_600,
@@ -362,8 +383,7 @@ def import_data(pasted_text):
                     errors.append(f"{param_name}: Purchase Term (Years) must be between 1 and 30")
                     continue
                 elif var_name in ['home_growth', 'home2_growth', 'purchase_growth', 'sale_cost_pct', 'home2_sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate',
-                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'purchase_rate', 'debt_interest_rate', 'percent_down']: 
-                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'debt_interest_rate']:
+                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'purchase_rate', 'debt_interest_rate', 'percent_down']:
                     # These are percentages - validate 0-100 range
                     if not (0 <= value <= 100):
                         errors.append(f"{param_name}: Percentage must be between 0 and 100")
@@ -512,6 +532,25 @@ balloon_payment = st.sidebar.number_input(
     key="balloon_payment"
 )
 
+home_property_tax = st.sidebar.number_input(
+    "Property Tax (Yearly) ($)",
+    value=int(st.session_state.get('imported_home_property_tax', 0)),
+    step=500,
+    key="home_property_tax"
+)
+home_insurance = st.sidebar.number_input(
+    "Insurance (Yearly) ($)",
+    value=int(st.session_state.get('imported_home_insurance', 0)),
+    step=500,
+    key="home_insurance"
+)
+home_hoa_monthly = st.sidebar.number_input(
+    "HOA (Monthly) ($)",
+    value=int(st.session_state.get('imported_home_hoa_monthly', 0)),
+    step=50,
+    key="home_hoa_monthly"
+)
+
 st.sidebar.subheader("Second Home (Owned Outright)")
 home2_value_now = st.sidebar.number_input(
     "Home Value Today ($)", 
@@ -568,6 +607,25 @@ home2_balloon_payment = st.sidebar.number_input(
     key="home2_balloon_payment"
 )
 
+home2_property_tax = st.sidebar.number_input(
+    "Property Tax (Yearly) ($)",
+    value=int(st.session_state.get('imported_home2_property_tax', 0)),
+    step=500,
+    key="home2_property_tax"
+)
+home2_insurance = st.sidebar.number_input(
+    "Insurance (Yearly) ($)",
+    value=int(st.session_state.get('imported_home2_insurance', 0)),
+    step=500,
+    key="home2_insurance"
+)
+home2_hoa_monthly = st.sidebar.number_input(
+    "HOA (Monthly) ($)",
+    value=int(st.session_state.get('imported_home2_hoa_monthly', 0)),
+    step=50,
+    key="home2_hoa_monthly"
+)
+
 st.sidebar.subheader("Purchased Home")
 purchase_price = st.sidebar.number_input(
     "Purchase Price ($)",
@@ -593,6 +651,25 @@ purchase_growth = st.sidebar.slider("Home Value Growth (%)", 0.0, 8.0, float(pur
 down_payment = purchase_price * percent_down
 loan_amount = purchase_price - down_payment
 st.sidebar.info(f"**Loan Amount:** ${loan_amount:,.0f}")
+
+purchase_property_tax = st.sidebar.number_input(
+    "Property Tax (Yearly) ($)",
+    value=int(st.session_state.get('imported_purchase_property_tax', 0)),
+    step=500,
+    key="purchase_property_tax"
+)
+purchase_insurance = st.sidebar.number_input(
+    "Insurance (Yearly) ($)",
+    value=int(st.session_state.get('imported_purchase_insurance', 0)),
+    step=500,
+    key="purchase_insurance"
+)
+purchase_hoa_monthly = st.sidebar.number_input(
+    "HOA (Monthly) ($)",
+    value=int(st.session_state.get('imported_purchase_hoa_monthly', 0)),
+    step=50,
+    key="purchase_hoa_monthly"
+)
 
 st.sidebar.subheader("Income (Annual)")
 ssn_income = st.sidebar.number_input(
@@ -772,6 +849,14 @@ else:
     purchase_monthly_mortgage_payment = 0
     purchase_monthly_mortgage_rate = 0
 
+# Initialize property tax, insurance, and HOA tracking variables
+home_property_tax_current = home_property_tax
+home_insurance_current = home_insurance
+home2_property_tax_current = home2_property_tax
+home2_insurance_current = home2_insurance
+purchase_property_tax_current = purchase_property_tax
+purchase_insurance_current = purchase_insurance
+
 # Initialize debt
 debt_balance = 0
 
@@ -789,6 +874,20 @@ home2_mortgage_balance_series = []
 purchase_home_series = []
 purchase_mortgage_balance_series = []
 debt_series = []
+
+# PITI and property expense series
+home_piti_series = []
+home2_piti_series = []
+purchase_piti_series = []
+home_property_tax_series = []
+home_insurance_series = []
+home_hoa_series = []
+home2_property_tax_series = []
+home2_insurance_series = []
+home2_hoa_series = []
+purchase_property_tax_series = []
+purchase_insurance_series = []
+purchase_hoa_series = []
 
 # Detailed tracking for calculation verification
 mortgage_interest_series = []
@@ -847,6 +946,19 @@ for i, age in enumerate(ages):
     
     # Grow purchased home
     purchase_home_value *= (1 + purchase_growth)
+    
+    # Apply growth to property tax (2% annually) and insurance (3% annually)
+    home_property_tax_current *= 1.02
+    home_insurance_current *= 1.03
+    home2_property_tax_current *= 1.02
+    home2_insurance_current *= 1.03
+    purchase_property_tax_current *= 1.02
+    purchase_insurance_current *= 1.03
+    
+    # Convert HOA monthly to yearly (constant, no growth)
+    home_hoa_annual = home_hoa_monthly * 12
+    home2_hoa_annual = home2_hoa_monthly * 12
+    purchase_hoa_annual = purchase_hoa_monthly * 12
 
     # Determine expenses
     # Store base cost before inflation
@@ -958,6 +1070,18 @@ for i, age in enumerate(ages):
             if purchase_mortgage_remaining_months <= 0 or purchase_mortgage_balance_current <= 0:
                 purchase_mortgage_balance_current = 0
                 purchase_mortgage_remaining_months = 0
+
+    # Add property tax, insurance, and HOA to expenses (only if home exists and hasn't been sold)
+    # Home 1 expenses
+    if i < sell_home_years:
+        expenses += home_property_tax_current + home_insurance_current + home_hoa_annual
+    
+    # Home 2 expenses
+    if i < home2_sell_home_years:
+        expenses += home2_property_tax_current + home2_insurance_current + home2_hoa_annual
+    
+    # Purchased home expenses (always, since it's not sellable in current implementation)
+    expenses += purchase_property_tax_current + purchase_insurance_current + purchase_hoa_annual
 
     # Determine expense type for notes
     if age < start_age + self_years:
@@ -1316,6 +1440,25 @@ for i, age in enumerate(ages):
             notes.append(f"DEBT TAKEN: ${debt_taken_this_year:,.0f} added to debt (total: ${debt_balance:,.0f})")
     notes_str = " | ".join(notes)
 
+    # Calculate PITI for each home (Principal + Interest + Property Tax + Insurance)
+    # Home 1 PITI
+    home_piti = 0
+    if i < sell_home_years:
+        home_principal = mortgage_payment_annual - mortgage_interest_annual if mortgage_payment_annual > 0 else 0
+        home_piti = home_principal + mortgage_interest_annual + home_property_tax_current + home_insurance_current
+    
+    # Home 2 PITI
+    home2_piti = 0
+    if i < home2_sell_home_years:
+        home2_principal = home2_mortgage_payment_annual - home2_mortgage_interest_annual if home2_mortgage_payment_annual > 0 else 0
+        home2_piti = home2_principal + home2_mortgage_interest_annual + home2_property_tax_current + home2_insurance_current
+    
+    # Purchased Home PITI
+    purchase_piti = 0
+    if purchase_mortgage_balance_current > 0:
+        purchase_principal = purchase_mortgage_payment_annual - purchase_mortgage_interest_annual if purchase_mortgage_payment_annual > 0 else 0
+        purchase_piti = purchase_principal + purchase_mortgage_interest_annual + purchase_property_tax_current + purchase_insurance_current
+
     net_worth.append(total_assets)
     expenses_series.append(expenses)
     cashflow_series.append(cash_flow)
@@ -1366,6 +1509,20 @@ for i, age in enumerate(ages):
     income_series.append(income_annual)
     notes_series.append(notes_str)
     
+    # Append PITI and property expense series
+    home_piti_series.append(home_piti)
+    home2_piti_series.append(home2_piti)
+    purchase_piti_series.append(purchase_piti)
+    home_property_tax_series.append(home_property_tax_current)
+    home_insurance_series.append(home_insurance_current)
+    home_hoa_series.append(home_hoa_annual)
+    home2_property_tax_series.append(home2_property_tax_current)
+    home2_insurance_series.append(home2_insurance_current)
+    home2_hoa_series.append(home2_hoa_annual)
+    purchase_property_tax_series.append(purchase_property_tax_current)
+    purchase_insurance_series.append(purchase_insurance_current)
+    purchase_hoa_series.append(purchase_hoa_annual)
+    
     # Append expense calculation tracking
     expense_base_cost_series.append(base_cost)
     expense_inflation_rate_series.append(inflation_rate * 100)  # Store as percentage
@@ -1386,6 +1543,9 @@ df = pd.DataFrame({
     "Home Value": home_series,
     "Home 2 Value": home2_series,
     "Purchased Home Value": purchase_home_series,
+    "First House PITI": home_piti_series,
+    "Second House PITI": home2_piti_series,
+    "Third House PITI": purchase_piti_series,
     "Debt": debt_series
 })
 
@@ -1771,6 +1931,9 @@ with st.expander("Show Projection Data"):
         "Home Value",
         "Home 2 Value",
         "Purchased Home Value",
+        "First House PITI",
+        "Second House PITI",
+        "Third House PITI",
         "Debt"
     ]
 

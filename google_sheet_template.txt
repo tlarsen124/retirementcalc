@@ -9,11 +9,33 @@ Remaining Term (yrs)	11
 Existing Mortgage Rate (%)	2.40
 Cap on Mortgage Interest ($)	750000
 Balloon Payment ($)	0
+Property Tax (Yearly) ($)	0
+Insurance (Yearly) ($)	0
+HOA (Monthly) ($)	0
+Second Home (Owned Outright)
+Home Value Today ($)	0
+Home Value Growth (%)	4.0
+Cost Basis + Improvements + 121 Deduction ($)	0
+Sell Home In (Years)	0
+Sale Cost (%)	6.0
+Second Home Mortgage
+Existing Mortgage Balance ($)	0
+Remaining Term (yrs)	0
+Existing Mortgage Rate (%)	2.40
+Cap on Mortgage Interest ($)	750000
+Balloon Payment ($)	0
+Property Tax (Yearly) ($)	0
+Insurance (Yearly) ($)	0
+HOA (Monthly) ($)	0
+Purchased Home
 Purchase Price ($)	290000
 Percent Down (%)	83.0
 Term (years)	5
 Interest (%)	7.75
 Home Value Growth (%)	4.0
+Property Tax (Yearly) ($)	0
+Insurance (Yearly) ($)	0
+HOA (Monthly) ($)	0
 SSN ($)	15600
 SSN starts at age	70
 Pension ($)	27600
