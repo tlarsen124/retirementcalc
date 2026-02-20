@@ -197,6 +197,7 @@ def map_parameter_to_variable(param_name):
         ('purchase_insurance', ['purchase insurance', 'purchased home insurance', 'third home insurance']),
         ('purchase_hoa_monthly', ['purchase hoa', 'purchased home hoa', 'third home hoa', 'purchase hoa monthly']),
         ('ssn_start_age', ['ssn starts at age', 'social security starts at age', 'ssn start age']),
+        ('ssn_cola', ['ssn cola', 'social security cola', 'ssn increase']),
         ('employment_end_age', ['employment ends at age', 'employment end age', 'end employment age']),
         ('ssn_income', ['ssn', 'social security']),
         ('pension_income', ['pension']),
@@ -318,6 +319,7 @@ def import_data(pasted_text):
             'purchase_insurance': 0,
             'purchase_hoa_monthly': 0,
             'ssn_start_age': 70,
+            'ssn_cola': 0.0,
             'employment_end_age': 95,
             'ssn_income': 15_600,
             'pension_income': 27_600,
@@ -385,7 +387,7 @@ def import_data(pasted_text):
                     errors.append(f"{param_name}: Purchase Term (Years) must be between 1 and 30")
                     continue
                 elif var_name in ['home_growth', 'home2_growth', 'purchase_growth', 'sale_cost_pct', 'home2_sale_cost_pct', 'avg_tax_rate', 'cap_gains_rate',
-                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'purchase_rate', 'debt_interest_rate', 'percent_down']:
+                                 'living_infl', 'care_infl', 'stock_growth', 'cash_growth', 'mortgage_rate', 'home2_mortgage_rate', 'purchase_rate', 'debt_interest_rate', 'percent_down', 'ssn_cola']:
                     # These are percentages - validate 0-100 range
                     if not (0 <= value <= 100):
                         errors.append(f"{param_name}: Percentage must be between 0 and 100")
@@ -499,6 +501,7 @@ Purchase property tax	0
 Purchase insurance	0
 Purchase hoa	0
 SSN starts at age	70
+SSN Cola	0.0
 Employment ends at age	95
 SSN	15600
 Pension	27600
@@ -766,6 +769,8 @@ ssn_start_age = st.sidebar.number_input(
     value=int(st.session_state.get('ssn_start_age', start_age)),
     key="ssn_start_age"
 )
+ssn_cola_slider_value = st.session_state.get('ssn_cola_slider', 0.0)
+ssn_cola = st.sidebar.slider("SSN Cola (%)", 0.0, 10.0, float(ssn_cola_slider_value), step=0.1, key="ssn_cola_slider") / 100
 employment_end_age = st.sidebar.number_input(
     "Employment ends at age",
     min_value=start_age,
@@ -1308,8 +1313,12 @@ for i, age in enumerate(ages):
         home2_value = 0
         home2_liquid_value = 0
 
-    # Income for this year: SSN from ssn_start_age, employment through employment_end_age (inclusive), pension always
-    ssn_this_year = ssn_income if age >= ssn_start_age else 0
+    # Income for this year: SSN from ssn_start_age with optional COLA growth
+    if age >= ssn_start_age:
+        years_on_ssn = age - ssn_start_age
+        ssn_this_year = ssn_income * ((1 + ssn_cola) ** years_on_ssn)
+    else:
+        ssn_this_year = 0
     employment_this_year = employment_income if age <= employment_end_age else 0
     income_annual = ssn_this_year + (pension_income + employment_this_year) * (1 - avg_tax_rate)
 

@@ -38,6 +38,7 @@ Insurance (Yearly) ($)	0
 HOA (Monthly) ($)	0
 SSN ($)	15600
 SSN starts at age	70
+SSN Cola (%)	0.0
 Pension ($)	27600
 Employment ($)	0
 Employment ends at age	95
