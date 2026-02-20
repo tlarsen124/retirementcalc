@@ -863,6 +863,7 @@ brokerage_tax_deferred = 0
 brokerage_prev_value = 0
 
 ira = ira_start
+roth_ira = roth_ira_start
 home_value = home_value_now
 mortgage_balance_current = mortgage_balance
 mortgage_remaining_months = mortgage_term * 12 if mortgage_term > 0 else 0
