@@ -744,17 +744,20 @@ st.sidebar.subheader("Income (Annual)")
 ssn_income = st.sidebar.number_input(
     "SSN ($)", 
     value=int(st.session_state.get('ssn_income', 15_600)), 
-    step=500
+    step=500,
+    key="ssn_income"
 )
 pension_income = st.sidebar.number_input(
     "Pension ($)", 
     value=int(st.session_state.get('pension_income', 27_600)), 
-    step=500
+    step=500,
+    key="pension_income"
 )
 employment_income = st.sidebar.number_input(
     "Employment ($)", 
     value=int(st.session_state.get('employment_income', 0)), 
-    step=1_000
+    step=1_000,
+    key="employment_income"
 )
 ssn_start_age = st.sidebar.number_input(
     "SSN starts at age",
