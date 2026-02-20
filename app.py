@@ -202,7 +202,8 @@ def map_parameter_to_variable(param_name):
         ('pension_income', ['pension']),
         ('employment_income', ['employment']),
         ('cash_start', ['cash / money market', 'cash', 'money market']),
-        # Growth fields must come before base fields
+        # Growth fields must come before base fields (roth ira before ira so "roth ira" matches)
+        ('roth_ira_start', ['roth ira', 'roth ira start']),
         ('stock_growth', ['stocks / ira growth', 'stocks growth', 'ira growth', 'stock growth']),
         ('ira_start', ['ira / stocks', 'ira', 'stocks']),
         # IMPORTANT: Cost fields must come before years fields to match correctly
@@ -456,51 +457,69 @@ if input_mode == "Import from Data":
         else:
             st.sidebar.warning("Please paste data before importing.")
     
-    # Comprehensive template showing all importable fields
-    with st.sidebar.expander("📋 **Complete Import Template (Age through Third Home)**"):
-        st.markdown("**Copy and paste this template with your values (use tab or spaces to separate):**")
+    # Flat template: one column = exact label phrase, next column = number (no section headers)
+    with st.sidebar.expander("📋 **Import template — exact phrases (label tab number)**"):
+        st.markdown("**Copy this. Replace numbers with your values. Use tab between label and number.**")
         st.code("""Age	70
 End age	95
-Home Value Today ($)	1100000
-Home Value Growth (%)	4.0
-Cost Basis + Improvements + 121 Deduction ($)	300000
-Sell Home In (Years)	5
-Sale Cost (%)	6.0
-Existing Mortgage Balance ($)	420000
-Remaining Term (yrs)	11
-Existing Mortgage Rate (%)	2.40
-Cap on Mortgage Interest ($)	750000
-Balloon Payment ($)	0
-Property Tax (Yearly) ($)	5000
-Insurance (Yearly) ($)	2000
-HOA (Monthly) ($)	300
-Second Home (Owned Outright)
-Home Value Today ($)	0
-Home Value Growth (%)	4.0
-Cost Basis + Improvements + 121 Deduction ($)	0
-Sell Home In (Years)	0
-Sale Cost (%)	6.0
-Second Home Mortgage
-Existing Mortgage Balance ($)	0
-Remaining Term (yrs)	0
-Existing Mortgage Rate (%)	2.40
-Cap on Mortgage Interest ($)	750000
-Balloon Payment ($)	0
-Property Tax (Yearly) ($)	0
-Insurance (Yearly) ($)	0
-HOA (Monthly) ($)	0
-Purchased Home
-Purchase Price ($)	290000
-Percent Down (%)	83.0
-Term (years)	5
-Interest (%)	7.75
-Home Value Growth (%)	4.0
-Property Tax (Yearly) ($)	0
-Insurance (Yearly) ($)	0
-HOA (Monthly) ($)	0
-IRA / Stocks ($)	1200000
-Roth IRA ($)	0""", language="")
-        st.markdown("*Note: Replace the example values with your actual data. Use tab or multiple spaces between keyword and value.*")
+Home value today	1100000
+Home value growth	4.0
+Cost basis + improvements + 121 deduction	300000
+Sell home in	5
+Sale cost	6.0
+Existing mortgage balance	420000
+Remaining term	11
+Existing mortgage rate	2.40
+Cap on mortgage interest	750000
+Balloon payment	0
+Home property tax	5000
+Home insurance	2000
+Home hoa	300
+Second home value today	0
+Second home value growth	4.0
+Second home cost basis	0
+Second home sell home in	0
+Second home sale cost	6.0
+Second home existing mortgage balance	0
+Second home remaining term	0
+Second home existing mortgage rate	2.40
+Second home cap on mortgage interest	750000
+Second home balloon payment	0
+Second home property tax	0
+Second home insurance	0
+Second home hoa	0
+Purchase price	290000
+Percent down	83.0
+Purchase term	5
+Purchase interest	7.75
+Purchase home value growth	4.0
+Purchase property tax	0
+Purchase insurance	0
+Purchase hoa	0
+SSN starts at age	70
+Employment ends at age	95
+SSN	15600
+Pension	27600
+Employment	0
+Cash / money market	145000
+Roth IRA	0
+IRA / stocks	1200000
+Stocks / IRA growth	7.0
+Self-sufficient annual cost	37812
+Self-sufficient	2
+Independent living annual cost	108000
+Independent living starts in	2
+Assisted living annual cost	114000
+Assisted living starts in	10
+Memory care annual cost	120000
+Memory care starts in	20
+Average tax rate	30.0
+Capital gains tax	25.0
+Living inflation	3.0
+Care level inflation	4.0
+Money market growth	4.5
+Average debt interest rate	8.0""", language="")
+        st.markdown("*Use these **exact phrases** as the first column so the importer maps each number to the right input (first home, second home, third/purchase home).*")
     
     st.sidebar.markdown("---")
     st.sidebar.info("💡 **Tip:** Imported values populate the inputs below. You can edit them at any time.")
