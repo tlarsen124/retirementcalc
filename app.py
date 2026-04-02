@@ -876,6 +876,61 @@ bg_color_map = {
 }
 selected_bg_color = bg_color_map[background_color]
 
+chart_layout_mode = st.sidebar.radio(
+    "Chart layout",
+    ("Screen", "Print (8.5×11 portrait)"),
+    index=0,
+    help="Print mode fixes chart width to about one column on letter-size paper and scales fonts so exports (Plotly camera / PNG) read well in Word or PDF.",
+)
+is_print_layout = chart_layout_mode.startswith("Print")
+
+# Plotly px sizes: print width ~6.5 in at ~100 dpi for a typical letter margin; heights keep a moderate aspect ratio for embedding
+if is_print_layout:
+    chart_px_w = 680
+    chart_main_h = 400
+    chart_assets_h = 320
+    chart_split_h = 300
+    chart_inc_h = 300
+    fs_axis_title = 15
+    fs_tick = 12
+    fs_legend_main = 12
+    fs_legend_sub = 11
+    fs_ann = 11
+    margin_main = dict(t=44, b=112, l=76, r=56)
+    margin_sub = dict(t=38, b=102, l=70, r=50, pad=0)
+    ann_ay = -36
+    ann_ax_x = 40
+    nw_line_w = 4
+    milestone_marker = 15
+    inc_line_w = 4
+else:
+    chart_px_w = None
+    chart_main_h = 900
+    chart_assets_h = 600
+    chart_split_h = 540
+    chart_inc_h = 520
+    fs_axis_title = 30
+    fs_tick = 24
+    fs_legend_main = 18
+    fs_legend_sub = 16
+    fs_ann = 20
+    margin_main = dict(t=50, b=100, l=100, r=100)
+    margin_sub = None
+    ann_ay = -50
+    ann_ax_x = 45
+    nw_line_w = 6
+    milestone_marker = 20
+    inc_line_w = 6
+
+plotly_export_config = {
+    "displayModeBar": True,
+    "toImageButtonOptions": {
+        "format": "png",
+        "filename": "chart_export",
+        "scale": 2 if is_print_layout else 1,
+    },
+}
+
 # =========================
 # PROJECTION
 # =========================
@@ -1793,7 +1848,7 @@ fig.add_trace(go.Scatter(
     x=df["Age"],
     y=df["Net Worth"],
     name="Net Worth",
-    line=dict(color="#162f3a", width=6, shape="spline"),
+    line=dict(color="#162f3a", width=nw_line_w, shape="spline"),
     yaxis="y2"
 ))
 
@@ -1803,7 +1858,7 @@ for label, idx, color in milestones:
         x=[df.loc[idx, "Age"]],
         y=[df.loc[idx, "Net Worth"]],
         mode="markers",
-        marker=dict(size=20, color=color, line=dict(color="white", width=3)),
+        marker=dict(size=milestone_marker, color=color, line=dict(color="white", width=3)),
         yaxis="y2",
         showlegend=False
     ))
@@ -1853,6 +1908,8 @@ if show_background:
 # LAYOUT (NO GRIDLINES)
 # =========================
 # Add annotations for metrics at milestone points (labels below dots)
+_ann_border = 2 if is_print_layout else 3
+_ann_pad = 8 if is_print_layout else 12
 annotations = [
     # Starting Net Worth at Start milestone
     dict(
@@ -1864,13 +1921,13 @@ annotations = [
         arrowsize=2,
         arrowwidth=3,
         arrowcolor="white",
-        ax=45,
-        ay=-50,
+        ax=ann_ax_x,
+        ay=ann_ay,
         bgcolor="rgba(255,255,255,0.9)",
         bordercolor="#2c3e50",
-        borderwidth=3,
-        borderpad=12,
-        font=dict(size=20, color="#2c3e50"),
+        borderwidth=_ann_border,
+        borderpad=_ann_pad,
+        font=dict(size=fs_ann, color="#2c3e50"),
         yref="y2"
     ),
     # Peak Net Worth at Peak milestone
@@ -1884,12 +1941,12 @@ annotations = [
         arrowwidth=3,
         arrowcolor="white",
         ax=0,
-        ay=-50,
+        ay=ann_ay,
         bgcolor="rgba(255,255,255,0.9)",
         bordercolor="#2c3e50",
-        borderwidth=3,
-        borderpad=12,
-        font=dict(size=20, color="#2c3e50"),
+        borderwidth=_ann_border,
+        borderpad=_ann_pad,
+        font=dict(size=fs_ann, color="#2c3e50"),
         yref="y2"
     ),
     # Ending Net Worth at end of data
@@ -1902,32 +1959,33 @@ annotations = [
         arrowsize=2,
         arrowwidth=3,
         arrowcolor="white",
-        ax=-45,
-        ay=-50,
+        ax=-ann_ax_x,
+        ay=ann_ay,
         bgcolor="rgba(255,255,255,0.9)",
         bordercolor="#2c3e50",
-        borderwidth=3,
-        borderpad=12,
-        font=dict(size=20, color="#2c3e50"),
+        borderwidth=_ann_border,
+        borderpad=_ann_pad,
+        font=dict(size=fs_ann, color="#2c3e50"),
         yref="y2"
     )
 ]
 
 fig.update_layout(
     images=layout_images,
-    height=900,
+    height=chart_main_h,
+    **({"width": chart_px_w} if chart_px_w else {}),
     annotations=annotations,
     legend=dict(
         orientation="h",
         y=-0.15,
-        font=dict(size=18, color="#2c3e50"),
+        font=dict(size=fs_legend_main, color="#2c3e50"),
         bgcolor="rgba(255,255,255,0.85)",
         bordercolor="#2c3e50",
         borderwidth=2
     ),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=30, color="#2c3e50")),
-        tickfont=dict(size=24, color="#2c3e50"),
+        title=dict(text="Age", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         tickmode="linear",
         dtick=5,
         range=[start_age - 1, end_age + 1],
@@ -1951,8 +2009,8 @@ fig.update_layout(
     #     fixedrange=True
     # ),
     yaxis2=dict(
-        title=dict(text="Net Worth ($)", font=dict(size=30, color="#2c3e50")),
-        tickfont=dict(size=24, color="#2c3e50"),
+        title=dict(text="Net Worth ($)", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         overlaying="y",
         side="left",
         tickprefix="$",
@@ -1970,7 +2028,7 @@ fig.update_layout(
     # Enhanced background colors with gradient effect
     plot_bgcolor=selected_bg_color,
     paper_bgcolor="rgba(255,255,255,0.95)",  # Slightly off-white paper background
-    margin=dict(t=50, b=100, l=100, r=100),
+    margin=margin_main,
     # Add a subtle border around the plot
     shapes=[
         dict(
@@ -1983,7 +2041,11 @@ fig.update_layout(
     ]
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(
+    fig,
+    use_container_width=chart_px_w is None,
+    config={**plotly_export_config, "toImageButtonOptions": {**plotly_export_config["toImageButtonOptions"], "filename": "net_worth_overview", **({"width": chart_px_w, "height": chart_main_h} if chart_px_w else {})}},
+)
 
 
 # =========================
@@ -2000,10 +2062,11 @@ fig2.add_trace(go.Scatter(x=df["Age"], y=-df["Debt"], name="Debt", line=dict(col
 
 fig2.update_layout(
     images=layout_images,
-    height=600,
+    height=chart_assets_h,
+    **({"width": chart_px_w} if chart_px_w else {}),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
-        tickfont=dict(size=18, color="#2c3e50"),
+        title=dict(text="Age", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         range=[start_age, end_age],
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
@@ -2016,8 +2079,8 @@ fig2.update_layout(
         linewidth=2
     ),
     yaxis=dict(
-        title=dict(text="Value ($)", font=dict(size=24, color="#2c3e50")),
-        tickfont=dict(size=18, color="#2c3e50"),
+        title=dict(text="Value ($)", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         tickprefix="$",
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
@@ -2032,7 +2095,7 @@ fig2.update_layout(
     legend=dict(
         orientation="h",
         y=-0.15,
-        font=dict(size=16, color="#2c3e50"),
+        font=dict(size=fs_legend_sub, color="#2c3e50"),
         bgcolor="rgba(255,255,255,0.85)",
         bordercolor="#2c3e50",
         borderwidth=2
@@ -2040,6 +2103,7 @@ fig2.update_layout(
     # Enhanced background colors
     plot_bgcolor=selected_bg_color,
     paper_bgcolor="rgba(255,255,255,0.95)",  # Slightly off-white paper background
+    **({"margin": margin_sub} if margin_sub is not None else {}),
     # Add a subtle border around the plot
     shapes=[
         dict(
@@ -2052,7 +2116,11 @@ fig2.update_layout(
     ]
 )
 
-st.plotly_chart(fig2, use_container_width=True)
+st.plotly_chart(
+    fig2,
+    use_container_width=chart_px_w is None,
+    config={**plotly_export_config, "toImageButtonOptions": {**plotly_export_config["toImageButtonOptions"], "filename": "assets_breakdown", **({"width": chart_px_w, "height": chart_assets_h} if chart_px_w else {})}},
+)
 
 # =========================
 # NET WORTH SPLIT (HOME EQUITY VS OTHER INVESTMENTS)
@@ -2083,10 +2151,11 @@ fig3.add_trace(go.Bar(
 fig3.update_layout(
     images=layout_images,
     barmode="group",
-    height=540,
+    height=chart_split_h,
+    **({"width": chart_px_w} if chart_px_w else {}),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
-        tickfont=dict(size=18, color="#2c3e50"),
+        title=dict(text="Age", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         range=[start_age, end_age],
         tickmode="linear",
         dtick=2,
@@ -2101,8 +2170,8 @@ fig3.update_layout(
         linewidth=2
     ),
     yaxis=dict(
-        title=dict(text="Value ($)", font=dict(size=24, color="#2c3e50")),
-        tickfont=dict(size=18, color="#2c3e50"),
+        title=dict(text="Value ($)", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         tickprefix="$",
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
@@ -2117,13 +2186,14 @@ fig3.update_layout(
     legend=dict(
         orientation="h",
         y=-0.15,
-        font=dict(size=16, color="#2c3e50"),
+        font=dict(size=fs_legend_sub, color="#2c3e50"),
         bgcolor="rgba(255,255,255,0.85)",
         bordercolor="#2c3e50",
         borderwidth=2
     ),
     plot_bgcolor=selected_bg_color,
     paper_bgcolor="rgba(255,255,255,0.95)",
+    **({"margin": margin_sub} if margin_sub is not None else {}),
     shapes=[
         dict(
             type="rect",
@@ -2135,7 +2205,11 @@ fig3.update_layout(
     ]
 )
 
-st.plotly_chart(fig3, use_container_width=True)
+st.plotly_chart(
+    fig3,
+    use_container_width=chart_px_w is None,
+    config={**plotly_export_config, "toImageButtonOptions": {**plotly_export_config["toImageButtonOptions"], "filename": "net_worth_split", **({"width": chart_px_w, "height": chart_split_h} if chart_px_w else {})}},
+)
 
 # =========================
 # INCOME VS EXPENSES
@@ -2146,22 +2220,23 @@ fig4.add_trace(go.Scatter(
     y=df_chart["Income"],
     name="Income",
     mode="lines",
-    line=dict(color="#27ae60", width=6)
+    line=dict(color="#27ae60", width=inc_line_w)
 ))
 fig4.add_trace(go.Scatter(
     x=df_chart["Age"],
     y=df_chart["Expenses"],
     name="Expenses",
     mode="lines",
-    line=dict(color="#c0392b", width=6)
+    line=dict(color="#c0392b", width=inc_line_w)
 ))
 
 fig4.update_layout(
     images=layout_images,
-    height=520,
+    height=chart_inc_h,
+    **({"width": chart_px_w} if chart_px_w else {}),
     xaxis=dict(
-        title=dict(text="Age", font=dict(size=24, color="#2c3e50")),
-        tickfont=dict(size=18, color="#2c3e50"),
+        title=dict(text="Age", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         range=[start_age, end_age],
         tickmode="linear",
         dtick=2,
@@ -2176,8 +2251,8 @@ fig4.update_layout(
         linewidth=2
     ),
     yaxis=dict(
-        title=dict(text="Amount ($)", font=dict(size=24, color="#2c3e50")),
-        tickfont=dict(size=18, color="#2c3e50"),
+        title=dict(text="Amount ($)", font=dict(size=fs_axis_title, color="#2c3e50")),
+        tickfont=dict(size=fs_tick, color="#2c3e50"),
         tickprefix="$",
         showgrid=True,
         gridcolor="rgba(44,62,80,0.15)",
@@ -2192,13 +2267,14 @@ fig4.update_layout(
     legend=dict(
         orientation="h",
         y=-0.15,
-        font=dict(size=16, color="#2c3e50"),
+        font=dict(size=fs_legend_sub, color="#2c3e50"),
         bgcolor="rgba(255,255,255,0.85)",
         bordercolor="#2c3e50",
         borderwidth=2
     ),
     plot_bgcolor=selected_bg_color,
     paper_bgcolor="rgba(255,255,255,0.95)",
+    **({"margin": margin_sub} if margin_sub is not None else {}),
     shapes=[
         dict(
             type="rect",
@@ -2210,7 +2286,11 @@ fig4.update_layout(
     ]
 )
 
-st.plotly_chart(fig4, use_container_width=True)
+st.plotly_chart(
+    fig4,
+    use_container_width=chart_px_w is None,
+    config={**plotly_export_config, "toImageButtonOptions": {**plotly_export_config["toImageButtonOptions"], "filename": "income_vs_expenses", **({"width": chart_px_w, "height": chart_inc_h} if chart_px_w else {})}},
+)
 
 # =========================
 # DATA TABLE (COLLAPSIBLE)
